@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from api.endpoints import router
-from utils.logging import setup_logging
+from src.api.endpoints import router
+from src.utils.logging import setup_logging
 
 # Initialize FastAPI app
 app = FastAPI(

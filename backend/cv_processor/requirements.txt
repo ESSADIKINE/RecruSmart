@@ -4,13 +4,16 @@ pdfplumber==0.11.4
 pymupdf==1.24.10 
 pytesseract==0.3.13 
 Pillow==10.4.0 
-
 spacy==3.7.6 
 https://github.com/explosion/spacy-models/releases/download/fr_core_news_sm-3.7.0/fr_core_news_sm-3.7.0-py3-none-any.whl
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.0/en_core_web_sm-3.7.0-py3-none-any.whl
 https://github.com/explosion/spacy-models/releases/download/fr_core_news_md-3.7.0/fr_core_news_md-3.7.0-py3-none-any.whl
 https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.7.0/en_core_web_md-3.7.0-py3-none-any.whl
 
+#python -m spacy download fr_core_news_sm
+#python -m spacy download en_core_web_sm  
+#python -m spacy download fr_core_news_md
+#python -m spacy download en_core_web_md
 nltk==3.9.1 
 fuzzywuzzy==0.18.0 
 python-Levenshtein==0.26.0 
@@ -18,3 +21,4 @@ transformers==4.45.2
 torch==2.4.1 
 requests==2.32.3 
 pytest==8.3.3
+dotenv==1.1.0
