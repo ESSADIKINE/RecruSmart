@@ -6,6 +6,7 @@ const UserSchema = new mongoose.Schema({
   password: { type: String },
   googleId: { type: String },
   name: { type: String },
+  role: { type: String, enum: ['CANDIDAT', 'RECRUTEUR'], default: 'CANDIDAT' }
 }, { timestamps: true });
 
 UserSchema.pre('save', async function (next) {
