@@ -1,4 +1,4 @@
-package com.recrusmart.service_candidats;
+package com.recrusmart.candidate;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
