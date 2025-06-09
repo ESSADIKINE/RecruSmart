@@ -4,8 +4,8 @@ import lombok.Data;
 
 @Data
 public class CandidatureDTO {
-    private Long profileId;
-    private String offerId;
-    private String status;
+    private String profilId;
+    private String offreId;
+    private String statut;
     private Integer score;
 }
