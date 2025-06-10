@@ -23,12 +23,14 @@ public class CandidatControleur {
 
     @PostMapping("/profil")
     public ResponseEntity<Profile> creerProfil(@RequestBody ProfileDTO profilDTO) {
+        System.out.println("[DEBUG] Appel à /candidats/profil avec: " + profilDTO);
         Profile profil = candidatService.creerProfil(profilDTO);
         return ResponseEntity.ok(profil);
     }
 
     @PostMapping("/{utilisateurId}/cv")
     public ResponseEntity<String> televerserCv(@PathVariable String utilisateurId, @RequestPart("fichier") MultipartFile fichier) {
+        System.out.println("[DEBUG] Appel à /candidats/" + utilisateurId + "/cv, fichier reçu: " + (fichier != null ? fichier.getOriginalFilename() : "null"));
         String urlCv = candidatService.televerserCv(utilisateurId, fichier);
         return ResponseEntity.ok(urlCv);
     }
@@ -62,5 +64,10 @@ public class CandidatControleur {
         candidatService.mettreAJourProfil(id, updateProfileDTO);
         return ResponseEntity.ok().build();
     }
-    
+
+    @PostMapping("/upload-test")
+    public ResponseEntity<String> uploadTest(@RequestPart("fichier") MultipartFile fichier) {
+        System.out.println("[DEBUG] Appel à /candidats/upload-test, fichier reçu: " + (fichier != null ? fichier.getOriginalFilename() : "null"));
+        return ResponseEntity.ok("OK: " + (fichier != null ? fichier.getOriginalFilename() : "null"));
+    }
 }

@@ -70,9 +70,9 @@ public class CandidateService {
         String urlCv = null;
         try {
             urlCv = serviceStockage.uploadCvFile(cheminCv, fichier);
-            logger.info("[UPLOAD-CV] Fichier uploadé sur MinIO: {}", urlCv);
+            logger.info("[UPLOAD-CV] Fichier uploadé sur Cloudflare R2: {}", urlCv);
         } catch (Exception e) {
-            logger.error("[UPLOAD-CV] Erreur upload MinIO: {}", e.getMessage(), e);
+            logger.error("[UPLOAD-CV] Erreur upload Cloudflare R2: {}", e.getMessage(), e);
             throw e;
         }
         profil.setUrlCv(urlCv);
@@ -82,7 +82,7 @@ public class CandidateService {
         // Publier l'événement CV reçu
         Map<String, Object> evenement = new HashMap<>();
         evenement.put("candidatId", idUtilisateur);
-        evenement.put("urlCv", urlCv);
+        evenement.put("cvUrl", urlCv);
         rabbitTemplate.convertAndSend("recrusmart.events", "Candidat.CV.Recu", evenement);
         logger.info("[UPLOAD-CV] Message RabbitMQ envoyé: {}", evenement);
 
