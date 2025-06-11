@@ -22,10 +22,10 @@ public class CandidatControleur {
     private CandidateService candidatService;
 
     @PostMapping("/profil")
-    public ResponseEntity<Profile> creerProfil(@RequestBody ProfileDTO profilDTO) {
+    public ResponseEntity<Void> creerProfil(@RequestBody ProfileDTO profilDTO) {
         System.out.println("[DEBUG] Appel à /candidats/profil avec: " + profilDTO);
-        Profile profil = candidatService.creerProfil(profilDTO);
-        return ResponseEntity.ok(profil);
+        candidatService.creerProfil(profilDTO);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{utilisateurId}/cv")

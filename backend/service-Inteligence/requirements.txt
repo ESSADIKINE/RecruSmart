@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pika
+requests
+pdfminer.six
+spacy
+python-dotenv
+transformers
+torch
+sentencepiece

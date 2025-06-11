@@ -48,6 +48,8 @@ public class CandidateService {
         try {
             profil.setCompetences(objectMapper.writeValueAsString(profilDTO.getCompetences()));
             profil.setLangues(objectMapper.writeValueAsString(profilDTO.getLangues()));
+            profil.setExperiences(objectMapper.writeValueAsString(profilDTO.getExperiences()));
+            profil.setEducations(objectMapper.writeValueAsString(profilDTO.getEducations()));
         } catch (Exception e) {
             throw new RuntimeException("Erreur de sérialisation JSON : " + e.getMessage(), e);
         }
@@ -83,8 +85,13 @@ public class CandidateService {
         Map<String, Object> evenement = new HashMap<>();
         evenement.put("candidatId", idUtilisateur);
         evenement.put("cvUrl", urlCv);
-        rabbitTemplate.convertAndSend("recrusmart.events", "Candidat.CV.Recu", evenement);
-        logger.info("[UPLOAD-CV] Message RabbitMQ envoyé: {}", evenement);
+        try {
+            String message = objectMapper.writeValueAsString(evenement);
+            rabbitTemplate.convertAndSend("recrusmart.events", "Candidat.CV.Recu", message);
+            logger.info("[UPLOAD-CV] Message RabbitMQ envoyé: {}", message);
+        } catch (Exception e) {
+            logger.error("[UPLOAD-CV] Erreur de sérialisation JSON pour RabbitMQ", e);
+        }
 
         return urlCv;
     }
@@ -121,6 +128,7 @@ public class CandidateService {
      * Met à jour le profil du candidat avec les données extraites du CV par l'IA.
      */
     public void remplirCv(PopulateCvDTO populateCvDTO) {
+        logger.info("[REMPLIR-CV] Payload reçu: {}", populateCvDTO);
         Profile profil = profilRepository.findByUtilisateurId(populateCvDTO.getId());
         if (profil == null) {
             throw new RuntimeException("Profil introuvable pour l'utilisateur : " + populateCvDTO.getId());

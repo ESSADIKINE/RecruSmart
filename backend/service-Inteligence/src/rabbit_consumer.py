@@ -1,19 +1,11 @@
 import pika
 import json
-import requests
 import logging
-from src.core.pdf_processing import process_resume
-
-# Configuration RabbitMQ
-RABBITMQ_HOST = "rabbitmq"
-RABBITMQ_EXCHANGE = "recrusmart.events"
-RABBITMQ_ROUTING_KEY = "Candidat.CV.Recu"
-
-# URL du service-candidats (adapter le port si besoin)
-CANDIDATS_POPULATE_CV_URL = "http://service-candidats:8080/api/candidats/populate-cv"
+from pdf_extractor import download_pdf, parse_cv
+from config import RABBITMQ_HOST, RABBITMQ_EXCHANGE, RABBITMQ_ROUTING_KEY, CANDIDATS_POPULATE_CV_URL
+import requests
 
 logging.basicConfig(level=logging.INFO)
-
 
 def on_message(ch, method, properties, body):
     logging.info("Message reçu de RabbitMQ")
@@ -25,29 +17,30 @@ def on_message(ch, method, properties, body):
             logging.error(f"Message incomplet: {data}")
             return
 
-        # 1. Traiter le CV (adapter process_resume si besoin)
-        result = process_resume(cv_url, candidat_id)
+        pdf_path = download_pdf(cv_url)
+        result = parse_cv(pdf_path)
 
-        # 2. Construire le payload pour populate-cv
         payload = {
             "id": candidat_id,
-            "experiences": result.get("experiences", []),
-            "competences": result.get("competences", []),
-            "langues": result.get("langues", []),
-            "educations": result.get("educations", [])
+            "experiences": result.get("experiences", {}),
+            "competences": result.get("competences", {}),
+            "langues": result.get("langues", {}),
+            "educations": result.get("educations", {}),
+            "anneesExperience": result.get("annees_experience", 0)
         }
+        logging.info(f"Payload envoyé à /candidats/remplir-cv: {payload}")
 
-        # 3. Appeler le service-candidats
         resp = requests.post(CANDIDATS_POPULATE_CV_URL, json=payload)
         if resp.status_code == 200:
             logging.info("Profil candidat mis à jour avec succès")
         else:
-            logging.error(f"Erreur lors de l'appel à /populate-cv: {resp.status_code} {resp.text}")
+            logging.error(f"Erreur lors de l'appel à /remplir-cv: {resp.status_code} {resp.text}")
     except Exception as e:
         logging.exception(f"Erreur lors du traitement du message RabbitMQ: {e}")
 
 def start_consumer():
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
+    print("OK: Connexion RabbitMQ réussie")
     channel = connection.channel()
     channel.exchange_declare(exchange=RABBITMQ_EXCHANGE, exchange_type='topic', durable=True)
     result = channel.queue_declare(queue='', exclusive=True)
