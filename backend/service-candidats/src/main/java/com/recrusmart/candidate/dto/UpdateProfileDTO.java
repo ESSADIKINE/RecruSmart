@@ -2,17 +2,30 @@ package com.recrusmart.candidate.dto;
 
 import lombok.Data;
 import java.util.List;
+import java.util.Map;
 
 @Data
 public class UpdateProfileDTO {
+    private Map<String, Integer> competences;
+    private Map<String, String> langues;
+    private Integer anneesExperience;
+    private Map<String, Map<String, Object>> experiences;
+    private Map<String, Map<String, Object>> educations;
     private List<String> domaines;
-    private Integer experience;
     private String niveauEtude;
 
+    public Map<String, Integer> getCompetences() { return competences; }
+    public void setCompetences(Map<String, Integer> competences) { this.competences = competences; }
+    public Map<String, String> getLangues() { return langues; }
+    public void setLangues(Map<String, String> langues) { this.langues = langues; }
+    public Integer getAnneesExperience() { return anneesExperience; }
+    public void setAnneesExperience(Integer anneesExperience) { this.anneesExperience = anneesExperience; }
+    public Map<String, Map<String, Object>> getExperiences() { return experiences; }
+    public void setExperiences(Map<String, Map<String, Object>> experiences) { this.experiences = experiences; }
+    public Map<String, Map<String, Object>> getEducations() { return educations; }
+    public void setEducations(Map<String, Map<String, Object>> educations) { this.educations = educations; }
     public List<String> getDomaines() { return domaines; }
     public void setDomaines(List<String> domaines) { this.domaines = domaines; }
-    public Integer getExperience() { return experience; }
-    public void setExperience(Integer experience) { this.experience = experience; }
     public String getNiveauEtude() { return niveauEtude; }
     public void setNiveauEtude(String niveauEtude) { this.niveauEtude = niveauEtude; }
 } 

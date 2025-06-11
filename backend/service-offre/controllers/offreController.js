@@ -4,11 +4,17 @@ const { publishOffreEvent } = require('../config/rabbitmq');
 exports.createOffre = async (req, res, next) => {
   try {
     const offre = await Offre.create(req.body);
-    // Publier l'événement RabbitMQ
+    // Publier l'événement RabbitMQ complet
     await publishOffreEvent('Recruitment.Offre.Publiée', {
       offreId: offre._id,
       titre: offre.titre,
-      date: new Date(),
+      description: offre.description,
+      domaine: offre.domaine,
+      langue: offre.langue,
+      competences: offre.competences,
+      experienceMin: offre.experienceMin,
+      niveauEtude: offre.niveauEtude,
+      date: new Date()
     });
     res.status(201).json(offre);
   } catch (err) {
@@ -39,6 +45,9 @@ exports.updateOffre = async (req, res, next) => {
   try {
     const offre = await Offre.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!offre) return res.status(404).json({ message: 'Offre non trouvée' });
+    if (req.body.candidats) {
+      console.log('Candidats mis à jour pour l\'offre', req.params.id, req.body.candidats);
+    }
     res.json(offre);
   } catch (err) {
     next(err);

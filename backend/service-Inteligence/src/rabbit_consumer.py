@@ -20,15 +20,20 @@ def on_message(ch, method, properties, body):
         pdf_path = download_pdf(cv_url)
         result = parse_cv(pdf_path)
 
+        # Sécurité : forcer les champs à être des dict
+        def ensure_dict(val):
+            return val if isinstance(val, dict) else {}
+
         payload = {
             "id": candidat_id,
-            "experiences": result.get("experiences", {}),
-            "competences": result.get("competences", {}),
-            "langues": result.get("langues", {}),
-            "educations": result.get("educations", {}),
+            "experiences": ensure_dict(result.get("experiences")),
+            "competences": ensure_dict(result.get("competences")),
+            "langues": ensure_dict(result.get("langues")),
+            "educations": ensure_dict(result.get("educations")),
             "anneesExperience": result.get("annees_experience", 0)
         }
         logging.info(f"Payload envoyé à /candidats/remplir-cv: {payload}")
+        logging.info(f"Types: exp={type(payload['experiences'])}, comp={type(payload['competences'])}, lang={type(payload['langues'])}, edu={type(payload['educations'])}")
 
         resp = requests.post(CANDIDATS_POPULATE_CV_URL, json=payload)
         if resp.status_code == 200:
@@ -39,13 +44,14 @@ def on_message(ch, method, properties, body):
         logging.exception(f"Erreur lors du traitement du message RabbitMQ: {e}")
 
 def start_consumer():
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
-    print("OK: Connexion RabbitMQ réussie")
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+    print(f"OK: Connexion RabbitMQ réussie (host={RABBITMQ_HOST})")
     channel = connection.channel()
     channel.exchange_declare(exchange=RABBITMQ_EXCHANGE, exchange_type='topic', durable=True)
     result = channel.queue_declare(queue='', exclusive=True)
     queue_name = result.method.queue
     channel.queue_bind(exchange=RABBITMQ_EXCHANGE, queue=queue_name, routing_key=RABBITMQ_ROUTING_KEY)
+    print(f"[RabbitMQ] En attente de messages sur routing key: {RABBITMQ_ROUTING_KEY}")
     channel.basic_consume(queue=queue_name, on_message_callback=on_message, auto_ack=True)
     logging.info("En attente de messages RabbitMQ...")
     channel.start_consuming()

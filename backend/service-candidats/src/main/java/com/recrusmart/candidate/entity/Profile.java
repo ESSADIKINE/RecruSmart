@@ -24,7 +24,7 @@ public class Profile {
     private String urlCv; // URL du CV dans MinIO
 
     @Column(columnDefinition = "TEXT")
-    private String competences; // Compétences (JSON, Map<String, Integer>)
+    private String competences; // Compétences (JSON, Map<String, Integer> de 1 à 5)
 
     @Column(columnDefinition = "TEXT")
     private String langues; // Langues (JSON, Map<String, String>)
@@ -39,7 +39,7 @@ public class Profile {
     private String educations; // Formations (JSON, Map<String, Map<String, Object>>)
 
     @Column(columnDefinition = "TEXT")
-    private String domaines; // Domaines (JSON)
+    private String domaines; // Domaines (JSON, List<String>)
 
     @Column(name = "niveau_etude")
     private String niveauEtude; // Niveau d'étude

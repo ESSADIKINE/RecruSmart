@@ -55,6 +55,13 @@ public class CandidatControleur {
 
     @PostMapping("/remplir-cv")
     public ResponseEntity<Void> remplirCv(@RequestBody PopulateCvDTO populateCvDTO) {
+        System.out.println("[DEBUG] Payload reçu à /remplir-cv: " + populateCvDTO);
+        if (populateCvDTO != null) {
+            System.out.println("[DEBUG] Types: exp=" + (populateCvDTO.getExperiences() != null ? populateCvDTO.getExperiences().getClass() : "null") +
+                ", comp=" + (populateCvDTO.getCompetences() != null ? populateCvDTO.getCompetences().getClass() : "null") +
+                ", lang=" + (populateCvDTO.getLangues() != null ? populateCvDTO.getLangues().getClass() : "null") +
+                ", edu=" + (populateCvDTO.getEducations() != null ? populateCvDTO.getEducations().getClass() : "null"));
+        }
         candidatService.remplirCv(populateCvDTO);
         return ResponseEntity.ok().build();
     }
@@ -69,5 +76,11 @@ public class CandidatControleur {
     public ResponseEntity<String> uploadTest(@RequestPart("fichier") MultipartFile fichier) {
         System.out.println("[DEBUG] Appel à /candidats/upload-test, fichier reçu: " + (fichier != null ? fichier.getOriginalFilename() : "null"));
         return ResponseEntity.ok("OK: " + (fichier != null ? fichier.getOriginalFilename() : "null"));
+    }
+
+    @GetMapping("/profils")
+    public ResponseEntity<List<Profile>> getAllProfils() {
+        List<Profile> profils = candidatService.getAllProfils();
+        return ResponseEntity.ok(profils);
     }
 }

@@ -50,15 +50,19 @@ public class CandidateService {
             profil.setLangues(objectMapper.writeValueAsString(profilDTO.getLangues()));
             profil.setExperiences(objectMapper.writeValueAsString(profilDTO.getExperiences()));
             profil.setEducations(objectMapper.writeValueAsString(profilDTO.getEducations()));
+            profil.setAnneesExperience(profilDTO.getAnneesExperience());
+            if (profilDTO.getDomaines() != null)
+                profil.setDomaines(objectMapper.writeValueAsString(profilDTO.getDomaines()));
+            if (profilDTO.getNiveauEtude() != null)
+                profil.setNiveauEtude(profilDTO.getNiveauEtude());
         } catch (Exception e) {
             throw new RuntimeException("Erreur de sérialisation JSON : " + e.getMessage(), e);
         }
-        profil.setAnneesExperience(profilDTO.getAnneesExperience());
         return profilRepository.save(profil);
     }
 
     /**
-     * Upload le CV du candidat, le stocke dans MinIO et envoie un message RabbitMQ à l'IA.
+     * Téléverse le CV du candidat, le stocke dans Cloudflare R2 et envoie un message RabbitMQ à l'IA.
      */
     public String televerserCv(String idUtilisateur, MultipartFile fichier) {
         logger.info("[UPLOAD-CV] Reçu pour utilisateurId={}", idUtilisateur);
@@ -74,7 +78,7 @@ public class CandidateService {
             urlCv = serviceStockage.uploadCvFile(cheminCv, fichier);
             logger.info("[UPLOAD-CV] Fichier uploadé sur Cloudflare R2: {}", urlCv);
         } catch (Exception e) {
-            logger.error("[UPLOAD-CV] Erreur upload Cloudflare R2: {}", e.getMessage(), e);
+            logger.error("[UPLOAD-CV] Erreur lors de l'upload sur Cloudflare R2: {}", e.getMessage(), e);
             throw e;
         }
         profil.setUrlCv(urlCv);
@@ -104,6 +108,9 @@ public class CandidateService {
         candidature.setProfilId(candidatureDTO.getProfilId());
         candidature.setOffreId(candidatureDTO.getOffreId());
         candidature.setStatut("EN_ATTENTE");
+        if (candidatureDTO.getScore() != null) {
+            candidature.setScore(candidatureDTO.getScore());
+        }
         Candidature candidatureEnregistree = candidatureRepository.save(candidature);
 
         // Publier l'événement Candidature soumise
@@ -113,6 +120,7 @@ public class CandidateService {
         evenement.put("offreId", candidatureDTO.getOffreId());
         evenement.put("timestamp", java.time.Instant.now().toString());
         rabbitTemplate.convertAndSend("recrusmart.events", "Candidat.Candidature.Soumise", evenement);
+        logger.info("[CANDIDATURE] Événement RabbitMQ publié: {}", evenement);
 
         return candidatureEnregistree;
     }
@@ -145,7 +153,7 @@ public class CandidateService {
     }
 
     /**
-     * Met à jour manuellement le profil du candidat (domaines, expérience, niveau d'étude).
+     * Met à jour tous les champs du profil du candidat (sauf utilisateurId et urlCv).
      */
     public void mettreAJourProfil(String id, UpdateProfileDTO updateProfileDTO) {
         Profile profil = profilRepository.findByUtilisateurId(id);
@@ -153,12 +161,27 @@ public class CandidateService {
             throw new RuntimeException("Profil introuvable pour l'utilisateur : " + id);
         }
         try {
-            profil.setDomaines(objectMapper.writeValueAsString(updateProfileDTO.getDomaines()));
+            if (updateProfileDTO.getCompetences() != null)
+                profil.setCompetences(objectMapper.writeValueAsString(updateProfileDTO.getCompetences()));
+            if (updateProfileDTO.getLangues() != null)
+                profil.setLangues(objectMapper.writeValueAsString(updateProfileDTO.getLangues()));
+            if (updateProfileDTO.getAnneesExperience() != null)
+                profil.setAnneesExperience(updateProfileDTO.getAnneesExperience());
+            if (updateProfileDTO.getExperiences() != null)
+                profil.setExperiences(objectMapper.writeValueAsString(updateProfileDTO.getExperiences()));
+            if (updateProfileDTO.getEducations() != null)
+                profil.setEducations(objectMapper.writeValueAsString(updateProfileDTO.getEducations()));
+            if (updateProfileDTO.getDomaines() != null)
+                profil.setDomaines(objectMapper.writeValueAsString(updateProfileDTO.getDomaines()));
+            if (updateProfileDTO.getNiveauEtude() != null)
+                profil.setNiveauEtude(updateProfileDTO.getNiveauEtude());
         } catch (Exception e) {
             throw new RuntimeException("Erreur de sérialisation JSON : " + e.getMessage(), e);
         }
-        profil.setAnneesExperience(updateProfileDTO.getExperience());
-        profil.setNiveauEtude(updateProfileDTO.getNiveauEtude());
         profilRepository.save(profil);
+    }
+
+    public List<Profile> getAllProfils() {
+        return profilRepository.findAll();
     }
 }

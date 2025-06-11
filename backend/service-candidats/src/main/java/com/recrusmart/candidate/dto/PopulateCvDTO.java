@@ -6,12 +6,14 @@ import java.util.Map;
 
 @Data
 public class PopulateCvDTO {
-    private String id; // utilisateurId (ObjectId MongoDB)
+    private String id; // Identifiant de l'utilisateur (ObjectId MongoDB)
     private Map<String, Map<String, Object>> experiences;
     private Map<String, Integer> competences;
     private Map<String, String> langues;
     private Map<String, Map<String, Object>> educations;
     private Integer anneesExperience;
+    private List<String> domaines;
+    private String niveauEtude;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -25,4 +27,8 @@ public class PopulateCvDTO {
     public void setEducations(Map<String, Map<String, Object>> educations) { this.educations = educations; }
     public Integer getAnneesExperience() { return anneesExperience; }
     public void setAnneesExperience(Integer anneesExperience) { this.anneesExperience = anneesExperience; }
+    public List<String> getDomaines() { return domaines; }
+    public void setDomaines(List<String> domaines) { this.domaines = domaines; }
+    public String getNiveauEtude() { return niveauEtude; }
+    public void setNiveauEtude(String niveauEtude) { this.niveauEtude = niveauEtude; }
 } 

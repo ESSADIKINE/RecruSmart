@@ -14,6 +14,8 @@ public class ProfileDTO {
     private Integer anneesExperience;
     private Map<String, Map<String, Object>> experiences;
     private Map<String, Map<String, Object>> educations;
+    private List<String> domaines;
+    private String niveauEtude;
 
     public String getUtilisateurId() { return utilisateurId; }
     public void setUtilisateurId(String utilisateurId) { this.utilisateurId = utilisateurId; }
@@ -29,4 +31,8 @@ public class ProfileDTO {
     public void setExperiences(Map<String, Map<String, Object>> experiences) { this.experiences = experiences; }
     public Map<String, Map<String, Object>> getEducations() { return educations; }
     public void setEducations(Map<String, Map<String, Object>> educations) { this.educations = educations; }
+    public List<String> getDomaines() { return domaines; }
+    public void setDomaines(List<String> domaines) { this.domaines = domaines; }
+    public String getNiveauEtude() { return niveauEtude; }
+    public void setNiveauEtude(String niveauEtude) { this.niveauEtude = niveauEtude; }
 }

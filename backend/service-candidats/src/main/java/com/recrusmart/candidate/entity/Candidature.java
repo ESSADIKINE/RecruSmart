@@ -15,11 +15,11 @@ public class Candidature {
     private String profilId;
 
     @Column(name = "offer_id", nullable = false)
-    private String offreId; // Maps to MongoDB ObjectId from job-service
+    private String offreId; // Identifiant de l'offre (ObjectId MongoDB)
 
-    private String statut; // PENDING, INTERVIEW, REJECTED, ACCEPTED
+    private String statut; // EN_ATTENTE, ENTRETIEN, REJETÉ, ACCEPTÉ
 
-    private Integer score; // Matching score from ai-service
+    private Integer score; // Score de correspondance IA
 
     public String getProfilId() { return profilId; }
     public void setProfilId(String profilId) { this.profilId = profilId; }

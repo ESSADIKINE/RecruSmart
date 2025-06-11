@@ -8,6 +8,15 @@ const OffreSchema = new mongoose.Schema({
   lieu: { type: String },
   dateExpiration: { type: Date },
   createdAt: { type: Date, default: Date.now },
+  candidats: [
+    {
+      utilisateur_id: { type: String },
+      CV: { type: String },
+      score: { type: Number }
+    }
+  ],
+  domaine: { type: String },
+  langue: { type: String },
 });
 
 module.exports = mongoose.model('Offre', OffreSchema); 
