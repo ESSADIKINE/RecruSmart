@@ -119,8 +119,13 @@ public class CandidateService {
         evenement.put("profilId", candidatureDTO.getProfilId());
         evenement.put("offreId", candidatureDTO.getOffreId());
         evenement.put("timestamp", java.time.Instant.now().toString());
-        rabbitTemplate.convertAndSend("recrusmart.events", "Candidat.Candidature.Soumise", evenement);
-        logger.info("[CANDIDATURE] Événement RabbitMQ publié: {}", evenement);
+        try {
+            String message = objectMapper.writeValueAsString(evenement);
+            rabbitTemplate.convertAndSend("recrusmart.events", "Candidat.Candidature.Soumise", message);
+            logger.info("[CANDIDATURE] Événement RabbitMQ publié: {}", message);
+        } catch (Exception e) {
+            logger.error("[CANDIDATURE] Erreur de sérialisation JSON pour RabbitMQ", e);
+        }
 
         return candidatureEnregistree;
     }

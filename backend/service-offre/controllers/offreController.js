@@ -63,3 +63,17 @@ exports.deleteOffre = async (req, res, next) => {
     next(err);
   }
 }; 
+
+exports.updateOffrePartiel = async (req, res) => {
+  try {
+    const offreId = req.params.id;
+    const updateData = req.body;
+    const offre = await Offre.findByIdAndUpdate(offreId, updateData, { new: true });
+    if (!offre) {
+      return res.status(404).json({ message: "Offre non trouvée" });
+    }
+    res.json(offre);
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la mise à jour partielle de l'offre", error });
+  }
+};

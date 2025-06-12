@@ -13,5 +13,7 @@ router.delete('/:id', verifyJwt(['RECRUTEUR']), offreController.deleteOffre);
 router.get('/', offreController.getAllOffres);
 // Récupérer une offre par ID (public)
 router.get('/:id', offreController.getOffreById);
+// Mise à jour partielle d'une offre (RECRUTEUR)
+router.patch('/:id', verifyJwt(['RECRUTEUR']), offreController.updateOffrePartiel);
 
 module.exports = router; 

@@ -11,12 +11,13 @@ const OffreSchema = new mongoose.Schema({
   candidats: [
     {
       utilisateur_id: { type: String },
-      CV: { type: String },
+      cv: { type: String },
       score: { type: Number }
     }
   ],
   domaine: { type: String },
   langue: { type: String },
+  niveauEtude: { type: String },
 });
 
 module.exports = mongoose.model('Offre', OffreSchema); 
