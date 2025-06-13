@@ -3,4 +3,5 @@ import os
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
 RABBITMQ_EXCHANGE = os.getenv("RABBITMQ_EXCHANGE", "recrusmart.events")
 RABBITMQ_ROUTING_KEY = os.getenv("RABBITMQ_ROUTING_KEY", "Candidat.CV.Recu")
-CANDIDATS_POPULATE_CV_URL = os.getenv("CANDIDATS_POPULATE_CV_URL", "http://localhost:8084/candidats/remplir-cv") 
+CANDIDATS_POPULATE_CV_URL = os.getenv("CANDIDATS_POPULATE_CV_URL", "http://localhost:8084/candidats/remplir-cv")
+SERVICE_JWT = os.getenv("SERVICE_JWT", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NGFiMjMxOWUwYWVhNjk1ODU3ZmQ1NiIsImVtYWlsIjoicmVjcnV0ZXVyMUBnbWFpbC5jb20iLCJyb2xlIjoiUkVDUlVURVVSIiwiaWF0IjoxNzQ5NzM3MzU3LCJleHAiOjE3NDk4MjM3NTd9.VEBp-Kc7lDSj73K_F40MhllqzKdpjAZG4PJewXtd5CY")  # <-- AJOUTE ICI TON JWT

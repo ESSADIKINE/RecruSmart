@@ -1,19 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const offreController = require('../controllers/offreController');
-const verifyJwt = require('../middleware/authMiddleware');
+const { authenticateToken } = require('../middleware/auth');
 
-// Créer une offre (RECRUTEUR)
-router.post('/', verifyJwt(['RECRUTEUR']), offreController.createOffre);
-// Modifier une offre (RECRUTEUR)
-router.put('/:id', verifyJwt(['RECRUTEUR']), offreController.updateOffre);
-// Supprimer une offre (RECRUTEUR)
-router.delete('/:id', verifyJwt(['RECRUTEUR']), offreController.deleteOffre);
-// Récupérer toutes les offres (public)
+// Routes pour les offres
+router.post('/', authenticateToken, offreController.createOffre);
 router.get('/', offreController.getAllOffres);
-// Récupérer une offre par ID (public)
 router.get('/:id', offreController.getOffreById);
-// Mise à jour partielle d'une offre (RECRUTEUR)
-router.patch('/:id', verifyJwt(['RECRUTEUR']), offreController.updateOffrePartiel);
+router.put('/:id', authenticateToken, offreController.updateOffre);
+router.delete('/:id', authenticateToken, offreController.deleteOffre);
+
+// Routes pour les candidats
+router.post('/:offreId/candidats', authenticateToken, offreController.addCandidatToOffre);
+router.get('/:offreId/candidats', authenticateToken, offreController.getCandidatsForOffre);
+router.put('/:offreId/candidats/:utilisateurId/score', authenticateToken, offreController.updateCandidatScore);
 
 module.exports = router; 

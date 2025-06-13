@@ -1,8 +1,6 @@
 package com.recrusmart.candidate.controller;
 
-import com.recrusmart.candidate.dto.CandidatureDTO;
 import com.recrusmart.candidate.dto.ProfileDTO;
-import com.recrusmart.candidate.entity.Candidature;
 import com.recrusmart.candidate.entity.Profile;
 import com.recrusmart.candidate.service.CandidateService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,15 +34,9 @@ public class CandidatControleur {
     }
 
     @PostMapping("/candidature")
-    public ResponseEntity<Candidature> soumettreCandidature(@RequestBody CandidatureDTO candidatureDTO) {
-        Candidature candidature = candidatService.soumettreCandidature(candidatureDTO);
-        return ResponseEntity.ok(candidature);
-    }
-
-    @GetMapping("/{profilId}/candidatures")
-    public ResponseEntity<List<Candidature>> recupererCandidatures(@PathVariable String profilId) {
-        List<Candidature> candidatures = candidatService.recupererCandidaturesParProfil(profilId);
-        return ResponseEntity.ok(candidatures);
+    public ResponseEntity<Void> soumettreCandidature(@RequestParam String profilId, @RequestParam String offreId) {
+        candidatService.soumettreCandidature(profilId, offreId);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/televerser-cv")
@@ -82,5 +74,14 @@ public class CandidatControleur {
     public ResponseEntity<List<Profile>> getAllProfils() {
         List<Profile> profils = candidatService.getAllProfils();
         return ResponseEntity.ok(profils);
+    }
+
+    @GetMapping("/{utilisateurId}")
+    public ResponseEntity<Profile> getProfilById(@PathVariable String utilisateurId) {
+        Profile profil = candidatService.getProfilByUtilisateurId(utilisateurId);
+        if (profil == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(profil);
     }
 }

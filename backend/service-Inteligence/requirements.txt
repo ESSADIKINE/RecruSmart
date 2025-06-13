@@ -8,3 +8,5 @@ python-dotenv
 transformers
 torch
 sentencepiece
+PyJWT
+aiohttp

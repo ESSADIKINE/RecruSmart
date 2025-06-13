@@ -1,15 +1,14 @@
 package com.recrusmart.candidate.service;
 
-import com.recrusmart.candidate.dto.CandidatureDTO;
 import com.recrusmart.candidate.dto.ProfileDTO;
-import com.recrusmart.candidate.entity.Candidature;
 import com.recrusmart.candidate.entity.Profile;
-import com.recrusmart.candidate.repository.CandidatureRepository;
 import com.recrusmart.candidate.repository.ProfileRepository;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.http.MediaType;
 
 import java.util.HashMap;
 import java.util.List;
@@ -21,6 +20,10 @@ import com.recrusmart.candidate.dto.UpdateProfileDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import java.util.Date;
 
 @Service
 public class CandidateService {
@@ -31,13 +34,22 @@ public class CandidateService {
     private ProfileRepository profilRepository;
 
     @Autowired
-    private CandidatureRepository candidatureRepository;
-
-    @Autowired
     private StorageService serviceStockage;
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
+
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    private String generateServiceToken() {
+        return Jwts.builder()
+            .setSubject("service-candidats")
+            .setIssuedAt(new Date())
+            .setExpiration(new Date(System.currentTimeMillis() + 3600000)) // 1 heure
+            .signWith(SignatureAlgorithm.HS256, jwtSecret.getBytes())
+            .compact();
+    }
 
     /**
      * Crée un nouveau profil candidat à partir d'un DTO.
@@ -103,38 +115,52 @@ public class CandidateService {
     /**
      * Soumet une candidature pour un profil donné.
      */
-    public Candidature soumettreCandidature(CandidatureDTO candidatureDTO) {
-        Candidature candidature = new Candidature();
-        candidature.setProfilId(candidatureDTO.getProfilId());
-        candidature.setOffreId(candidatureDTO.getOffreId());
-        candidature.setStatut("EN_ATTENTE");
-        if (candidatureDTO.getScore() != null) {
-            candidature.setScore(candidatureDTO.getScore());
-        }
-        Candidature candidatureEnregistree = candidatureRepository.save(candidature);
-
-        // Publier l'événement Candidature soumise
-        Map<String, Object> evenement = new HashMap<>();
-        evenement.put("candidatureId", candidatureEnregistree.getId());
-        evenement.put("profilId", candidatureDTO.getProfilId());
-        evenement.put("offreId", candidatureDTO.getOffreId());
-        evenement.put("timestamp", java.time.Instant.now().toString());
+    public void soumettreCandidature(String profilId, String offreId) {
         try {
-            String message = objectMapper.writeValueAsString(evenement);
-            rabbitTemplate.convertAndSend("recrusmart.events", "Candidat.Candidature.Soumise", message);
-            logger.info("[CANDIDATURE] Événement RabbitMQ publié: {}", message);
+            logger.info("[CANDIDATURE] Début synchro service-offre");
+            Profile profil = profilRepository.findByUtilisateurId(profilId);
+            if (profil == null) {
+                throw new RuntimeException("Profil introuvable pour l'utilisateur : " + profilId);
+            }
+
+            // Créer le candidat à ajouter
+            Map<String, Object> newCandidat = new HashMap<>();
+            newCandidat.put("utilisateurId", profilId);
+            newCandidat.put("cv", profil.getUrlCv());
+            newCandidat.put("score", null); // Optionnel, sera calculé plus tard
+
+            // Utiliser WebClient pour ajouter le candidat avec authentification
+            WebClient webClient = WebClient.builder()
+                .baseUrl("http://localhost:5001")
+                .defaultHeader("Authorization", "Bearer " + generateServiceToken())
+                .build();
+
+            String response = webClient.post()
+                .uri("/offres/" + offreId + "/candidats")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(newCandidat)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+            
+            logger.info("[CANDIDATURE] Réponse POST service-offre: " + response);
+
+            // Publier l'événement Candidature soumise
+            Map<String, Object> evenement = new HashMap<>();
+            evenement.put("profilId", profilId);
+            evenement.put("offreId", offreId);
+            evenement.put("timestamp", java.time.Instant.now().toString());
+            try {
+                String message = objectMapper.writeValueAsString(evenement);
+                rabbitTemplate.convertAndSend("recrusmart.events", "Candidat.Candidature.Soumise", message);
+                logger.info("[CANDIDATURE] Événement RabbitMQ publié: {}", message);
+            } catch (Exception e) {
+                logger.error("[CANDIDATURE] Erreur de sérialisation JSON pour RabbitMQ", e);
+            }
         } catch (Exception e) {
-            logger.error("[CANDIDATURE] Erreur de sérialisation JSON pour RabbitMQ", e);
+            logger.error("[CANDIDATURE] Erreur lors de la synchro avec service-offre: " + e.getMessage(), e);
+            throw new RuntimeException("Erreur lors de la soumission de la candidature: " + e.getMessage());
         }
-
-        return candidatureEnregistree;
-    }
-
-    /**
-     * Récupère la liste des candidatures pour un profil donné.
-     */
-    public List<Candidature> recupererCandidaturesParProfil(String idProfil) {
-        return candidatureRepository.findByProfilId(idProfil);
     }
 
     /**
@@ -188,5 +214,9 @@ public class CandidateService {
 
     public List<Profile> getAllProfils() {
         return profilRepository.findAll();
+    }
+
+    public Profile getProfilByUtilisateurId(String utilisateurId) {
+        return profilRepository.findByUtilisateurId(utilisateurId);
     }
 }
