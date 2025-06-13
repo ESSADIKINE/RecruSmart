@@ -1,18 +1,17 @@
-import pika, json, requests
+import json
 import aiohttp
 import os
 import asyncio
 from typing import List, Dict, Any
-try:
-    from .config import SERVICE_JWT
-except ImportError:
-    from config import SERVICE_JWT
-# --- UTILS ---
-OFFRE_SERVICE_URL = os.getenv("OFFRE_SERVICE_URL", "http://localhost:5001")
+from .config import OFFRE_SERVICE_URL
 
-async def get_offre(offre_id: str) -> Dict[str, Any]:
+async def get_offre(offre_id: str, token: str) -> Dict[str, Any]:
+    """Récupère les détails d'une offre depuis le service Offres"""
     async with aiohttp.ClientSession() as session:
-        async with session.get(f"{OFFRE_SERVICE_URL}/offres/{offre_id}") as response:
+        async with session.get(
+            f"{OFFRE_SERVICE_URL}/offres/{offre_id}",
+            headers={"Authorization": f"Bearer {token}"}
+        ) as response:
             if response.status == 200:
                 return await response.json()
             return None
@@ -26,12 +25,13 @@ async def add_candidat_to_offre(offre_id: str, candidat: Dict[str, Any]) -> bool
         ) as response:
             return response.status == 200
 
-async def update_candidat_score(offre_id: str, candidat: Dict[str, Any]) -> bool:
+async def update_candidat_score(offre_id: str, candidat: Dict[str, Any], token: str) -> bool:
+    """Met à jour le score d'un candidat pour une offre"""
     async with aiohttp.ClientSession() as session:
         async with session.put(
             f"{OFFRE_SERVICE_URL}/candidatures/offre/{offre_id}/candidat/{candidat['utilisateurId']}/score",
             json={"score": candidat["score"]},
-            headers={"Authorization": f"Bearer {SERVICE_JWT}"}
+            headers={"Authorization": f"Bearer {token}"}
         ) as response:
             return response.status == 200
 
@@ -79,105 +79,107 @@ def get_profil(utilisateur_id: str) -> Dict[str, Any]:
         print(f"[ERROR] get_profil({utilisateur_id}): {e}")
         return None
 
-def compute_score(candidat: Dict[str, Any], offre: Dict[str, Any]) -> int:
-    score = 0
-    # 1. Compétences (5 pts chacune)
-    offre_competences = set(offre.get('competences', []))
-    candidat_competences = set(candidat.get('competences', {}).keys())
-    exp_competences = set()
-    experiences = candidat.get('experiences', {})
-    for exp in experiences.values():
-        for v in exp.values():
-            if isinstance(v, str):
-                exp_competences.add(v)
-    all_candidat_competences = candidat_competences | exp_competences
-    for comp in offre_competences:
-        if comp in all_candidat_competences:
-            score += 5
-
-    # 2. Années d'expérience
-    if int(candidat.get('anneesExperience', 0)) >= int(offre.get('experienceMin', 0) or 0):
-        score += 15
-
-    # 3. Niveau d'étude
-    if str(candidat.get('niveauEtude', '')).lower() == str(offre.get('niveauEtude', '')).lower():
-        score += 15
-
-    # 4. Domaine
-    domaines = [d.lower() for d in candidat.get('domaines', [])]
-    if str(offre.get('domaine', '')).lower() in domaines:
-        score += 15
-
-    # 5. Langue
-    langues = [l.lower() for l in candidat.get('langues', {}).keys()]
-    if str(offre.get('langue', '').lower()) in langues:
-        score += 15
-
-    return min(score, 100)
-
 def safe_json_loads(val, default):
+    """Charge un JSON de manière sécurisée"""
     try:
         return json.loads(val) if isinstance(val, str) else val
     except Exception:
         return default
 
-async def process_scoring_request(offre_id: str):
+def compute_score(candidat: Dict[str, Any], offre: Dict[str, Any]) -> int:
+    """Calcule le score d'un candidat pour une offre"""
+    score = 0
+    
+    # 1. Compétences (5 pts chacune, bonus de 1-5 pts selon le niveau)
+    offre_competences = set(offre.get('competences', []))
+    candidat_competences = safe_json_loads(candidat.get('competences', '{}'), {})
+    exp_competences = set()
+    experiences = safe_json_loads(candidat.get('experiences', '{}'), {})
+    for exp in experiences.values():
+        for v in exp.values():
+            if isinstance(v, str):
+                exp_competences.add(v)
+    
+    # Vérifier chaque compétence requise
+    for comp in offre_competences:
+        # Vérifier dans les compétences principales
+        if comp in candidat_competences:
+            niveau = candidat_competences[comp]
+            score += 5 + niveau  # 5 points de base + niveau (1-5)
+        # Vérifier dans les expériences
+        elif comp in exp_competences:
+            score += 5  # Points de base sans bonus de niveau
+
+    # 2. Années d'expérience (15 pts si suffisant)
+    if int(candidat.get('anneesExperience', 0)) >= int(offre.get('experienceMin', 0) or 0):
+        score += 15
+
+    # 3. Niveau d'étude (15 pts si correspond)
+    candidat_niveau = str(candidat.get('niveauEtude', '')).lower()
+    offre_niveau = str(offre.get('niveauEtude', '')).lower()
+    if candidat_niveau == offre_niveau:
+        score += 15
+    elif candidat_niveau == 'bac+4' and offre_niveau == 'bac+5':
+        score += 10  # Bonus partiel pour niveau proche
+
+    # 4. Domaine (15 pts si correspond)
+    domaines = [d.lower() for d in safe_json_loads(candidat.get('domaines', '[]'), [])]
+    if str(offre.get('domaine', '')).lower() in domaines:
+        score += 15
+
+    # 5. Langue (15 pts si correspond)
+    langues = [l.lower() for l in safe_json_loads(candidat.get('langues', '{}'), {}).keys()]
+    if str(offre.get('langue', '').lower()) in langues:
+        score += 15
+
+    return min(score, 100)
+
+async def process_scoring_request(offre_id: str, token: str):
+    """Traite une demande de scoring pour une offre"""
     print(f"Traitement du scoring pour l'offre {offre_id}")
     
     # Récupérer l'offre
-    offre = await get_offre(offre_id)
+    offre = await get_offre(offre_id, token)
     if not offre:
         print(f"Erreur: Offre {offre_id} non trouvée")
         return
+    print(f"Offre récupérée: {offre.get('titre', 'Sans titre')}")
 
     # Récupérer les candidats
     async with aiohttp.ClientSession() as session:
         async with session.get(
             f"{OFFRE_SERVICE_URL}/candidatures/offre/{offre_id}",
-            headers={"Authorization": f"Bearer {SERVICE_JWT}"}
+            headers={"Authorization": f"Bearer {token}"}
         ) as response:
             if response.status != 200:
                 print(f"Erreur lors de la récupération des candidats: {response.status}")
                 return
             data = await response.json()
             candidats = data.get('candidats', [])
+            print(f"Nombre de candidats trouvés: {len(candidats)}")
 
     # Calculer les scores
     scored_candidats = []
     for candidat in candidats:
-        utilisateur_id = candidat.get('utilisateurId')
-        if not utilisateur_id:
-            continue
-
-        profil = get_profil(utilisateur_id)
-        if not profil:
-            print(f"[WARN] Profil non trouvé pour utilisateur {utilisateur_id}")
-            continue
-
-        # Désérialiser les champs JSON stringifiés
-        for field, default in [
-            ('competences', {}),
-            ('langues', {}),
-            ('experiences', {}),
-            ('educations', {}),
-            ('domaines', [])
-        ]:
-            profil[field] = safe_json_loads(profil.get(field, default), default)
-
-        score = compute_score(profil, offre)
+        score = compute_score(candidat, offre)
+        print(f"Score calculé pour le candidat {candidat.get('utilisateurId')}: {score}")
         scored_candidats.append({
-            "utilisateurId": utilisateur_id,
+            "utilisateurId": candidat["utilisateurId"],
             "score": score
         })
 
     print(f"Scores calculés pour {len(scored_candidats)} candidats")
 
     # Mettre à jour les scores
+    success_count = 0
     for candidat in scored_candidats:
-        if await update_candidat_score(offre_id, candidat):
+        if await update_candidat_score(offre_id, candidat, token):
             print(f"Score mis à jour pour le candidat {candidat['utilisateurId']}")
+            success_count += 1
         else:
             print(f"Erreur lors de la mise à jour du score pour le candidat {candidat['utilisateurId']}")
+    
+    print(f"Scoring terminé: {success_count}/{len(scored_candidats)} scores mis à jour avec succès")
 
 def on_event(ch, method, properties, body):
     try:
@@ -195,7 +197,7 @@ def on_event(ch, method, properties, body):
             print("Aucun offreId dans l'événement !")
             return
         print(f"[RabbitMQ] Déclenchement du scoring pour l'offre {offre_id}")
-        asyncio.run(process_scoring_request(offre_id))
+        asyncio.run(process_scoring_request(offre_id, event.get("token")))
 
 def start_consumer():
     print("Démarrage du consumer RabbitMQ...")
