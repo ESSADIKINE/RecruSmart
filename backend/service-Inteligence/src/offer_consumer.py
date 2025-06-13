@@ -49,10 +49,21 @@ async def scorer_candidats(offre: Dict[str, Any]) -> List[Dict[str, Any]]:
     for candidat in candidats:
         score = 0
         # Logique de scoring basée sur les compétences
-        if 'competences' in offre and 'competences' in candidat:
-            competences_offre = set(offre['competences'])
-            competences_candidat = set(candidat.get('competences', []))
-            score += len(competences_offre.intersection(competences_candidat)) * 10
+    if 'competences' in offre and 'competences' in candidat:
+        print("Both 'offre' and 'candidat' have 'competences' field")
+        competences_offre = set(offre['competences'])
+        competences_candidat = set(candidat.get('competences', []))
+        print(f"Offre competences: {competences_offre}")
+        print(f"Candidat competences: {competences_candidat}")
+    
+        common_competences = competences_offre.intersection(competences_candidat)
+        print(f"Common competences: {common_competences}")
+    
+        score_increment = len(common_competences) * 10
+        print(f"Adding {score_increment} points to score")
+    
+        score += score_increment
+        print(f"New score: {score}")
 
         # Logique de scoring basée sur l'expérience
         if 'annees_experience' in candidat:

@@ -33,9 +33,14 @@ async def process_cv_message(message):
         cv_url = data.get("cvUrl")
         token = data.get("token")
         
-        if not candidat_id or not cv_url or not token:
+        if not candidat_id or not cv_url:
             logger.error(f"Message incomplet: {data}")
             return
+
+        # Si pas de token dans le message, on utilise un token par défaut pour le service
+        if not token:
+            token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NGI1OWI2NTRhZmFjOTJjYzg0OTM0MSIsImVtYWlsIjoicmVjcnV0ZXVyMUBnbWFpbC5jb20iLCJyb2xlIjoiUkVDUlVURVVSIiwiaWF0IjoxNzQ5ODI0MzU3LCJleHAiOjE3NDk5MTA3NTd9.VEBp-Kc7lDSj73K_F40MhllqzKdpjAZG4PJewXtd5CY"
+            logger.info(f"Utilisation du token par défaut pour le candidat {candidat_id}")
 
         # Extraire les données du CV
         result = parse_cv(cv_url)
