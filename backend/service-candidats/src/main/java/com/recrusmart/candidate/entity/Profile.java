@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -23,22 +24,22 @@ public class Profile {
     private String urlCv; // URL du CV dans MinIO
 
     @Column(columnDefinition = "TEXT")
-    private String competences; // Compétences (JSON)
+    private String competences; // Compétences (JSON, Map<String, Integer> de 1 à 5)
 
     @Column(columnDefinition = "TEXT")
-    private String langues; // Langues (JSON)
+    private String langues; // Langues (JSON, Map<String, String>)
 
     @Column(name = "annees_experience")
     private Integer anneesExperience;
 
     @Column(columnDefinition = "TEXT")
-    private String experiences; // Expériences (JSON)
+    private String experiences; // Expériences (JSON, Map<String, Map<String, Object>>)
 
     @Column(columnDefinition = "TEXT")
-    private String educations; // Formations (JSON)
+    private String educations; // Formations (JSON, Map<String, Map<String, Object>>)
 
     @Column(columnDefinition = "TEXT")
-    private String domaines; // Domaines (JSON)
+    private String domaines; // Domaines (JSON, List<String>)
 
     @Column(name = "niveau_etude")
     private String niveauEtude; // Niveau d'étude

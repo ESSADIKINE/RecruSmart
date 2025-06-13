@@ -5,6 +5,7 @@ const cors = require('cors');
 const mongoose = require('./config/db');
 const offreRoutes = require('./routes/offreRoutes');
 const errorHandler = require('./middleware/errorHandler');
+const candidatOffreRoutes = require('./routes/candidatOffreRoutes');
 require('./config/rabbitmq');
 
 const app = express();
@@ -14,6 +15,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/offres', offreRoutes);
+app.use('/candidatures', candidatOffreRoutes);
 
 app.use(errorHandler);
 

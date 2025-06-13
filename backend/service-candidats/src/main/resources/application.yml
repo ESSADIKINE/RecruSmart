@@ -24,12 +24,14 @@ spring:
     username: guest
     password: guest
 
-minio:
-  url: http://192.168.11.111:9000
-  access-key: minioadmin
-  secret-key: minioadmin
-  bucket:
-    name: cv
+cloudflare:
+  r2:
+    endpoint: https://6869463e2369d0a64cf20a934c6aa2eb.r2.cloudflarestorage.com  # Remplacer par votre vrai endpoint Cloudflare R2
+    access-key: 85091b1f0894c546dbd9cf486c151f60  # Remplacer par votre vrai Access Key R2
+    secret-key: 7c1ecd80a89f5357362cd8c7690488114d4011d9cf24c7d896ed31f040711469  # Remplacer par votre vrai Secret Key R2
+    bucket:
+      name: recrusmart-cvs  # Nom du bucket créé dans Cloudflare R2
+    public-endpoint: https://pub-15ecea7a863e4583a576e62f10b10177.r2.dev
 
 jwt:
-  secret: your_jwt_secret
+  secret: VOTRE_SECRET_32_CARACTÈRES
