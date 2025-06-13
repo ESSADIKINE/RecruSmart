@@ -60,11 +60,18 @@ router.post('/', authenticateToken, async (req, res) => {
                 });
             }
 
-            // Ajouter le nouveau candidat
+            // Ajouter le nouveau candidat avec toutes les informations du profil
             offreCandidats.candidats.push({
                 utilisateurId,
                 cv: profil.urlCv,
                 score: null,
+                competences: profil.competences,
+                langues: profil.langues,
+                anneesExperience: profil.anneesExperience,
+                experiences: profil.experiences,
+                educations: profil.educations,
+                domaines: profil.domaines,
+                niveauEtude: profil.niveauEtude,
                 createdAt: new Date(),
                 updatedAt: new Date()
             });

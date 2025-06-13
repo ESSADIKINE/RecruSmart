@@ -4,6 +4,14 @@ const CandidatSchema = new mongoose.Schema({
     utilisateurId: { type: String, required: true },
     cv: { type: String },
     score: { type: Number },
+    // Informations du profil
+    competences: { type: String }, // JSON stringifié
+    langues: { type: String }, // JSON stringifié
+    anneesExperience: { type: Number },
+    experiences: { type: String }, // JSON stringifié
+    educations: { type: String }, // JSON stringifié
+    domaines: { type: String }, // JSON stringifié
+    niveauEtude: { type: String },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
