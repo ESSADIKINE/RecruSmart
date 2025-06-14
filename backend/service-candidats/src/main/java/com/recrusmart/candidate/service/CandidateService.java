@@ -1,6 +1,9 @@
 package com.recrusmart.candidate.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.recrusmart.candidate.dto.ProfileDTO;
+import com.recrusmart.candidate.dto.PopulateCvDTO;
+import com.recrusmart.candidate.dto.UpdateProfileDTO;
 import com.recrusmart.candidate.entity.Profile;
 import com.recrusmart.candidate.repository.ProfileRepository;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -14,12 +17,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Optional;
 
-import com.recrusmart.candidate.dto.PopulateCvDTO;
-import com.recrusmart.candidate.dto.UpdateProfileDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -57,6 +58,7 @@ public class CandidateService {
     public Profile creerProfil(ProfileDTO profilDTO) {
         Profile profil = new Profile();
         profil.setUtilisateurId(profilDTO.getUtilisateurId());
+        profil.setEmail(profilDTO.getEmail());
         try {
             profil.setCompetences(objectMapper.writeValueAsString(profilDTO.getCompetences()));
             profil.setLangues(objectMapper.writeValueAsString(profilDTO.getLangues()));
@@ -76,7 +78,7 @@ public class CandidateService {
     /**
      * Téléverse le CV du candidat, le stocke dans Cloudflare R2 et envoie un message RabbitMQ à l'IA.
      */
-    public String televerserCv(String idUtilisateur, MultipartFile fichier) {
+    public String televerserCv(String idUtilisateur, MultipartFile fichier, String token) {
         logger.info("[UPLOAD-CV] Reçu pour utilisateurId={}", idUtilisateur);
         Profile profil = profilRepository.findByUtilisateurId(idUtilisateur);
         if (profil == null) {
@@ -97,10 +99,11 @@ public class CandidateService {
         profilRepository.save(profil);
         logger.info("[UPLOAD-CV] Profil mis à jour avec urlCv");
 
-        // Publier l'événement CV reçu
+        // Publier l'événement CV reçu avec le token
         Map<String, Object> evenement = new HashMap<>();
         evenement.put("candidatId", idUtilisateur);
         evenement.put("cvUrl", urlCv);
+        evenement.put("token", token);
         try {
             String message = objectMapper.writeValueAsString(evenement);
             rabbitTemplate.convertAndSend("recrusmart.events", "Candidat.CV.Recu", message);
@@ -218,5 +221,27 @@ public class CandidateService {
 
     public Profile getProfilByUtilisateurId(String utilisateurId) {
         return profilRepository.findByUtilisateurId(utilisateurId);
+    }
+
+    public Profile populateCv(PopulateCvDTO populateCvDTO) {
+        Profile profile = profilRepository.findByUtilisateurId(populateCvDTO.getId());
+        if (profile == null) {
+            throw new RuntimeException("Profil non trouvé");
+        }
+
+        try {
+            // Mettre à jour les champs du profil
+            profile.setEmail(populateCvDTO.getEmail());
+            profile.setCompetences(objectMapper.writeValueAsString(populateCvDTO.getCompetences()));
+            profile.setLangues(objectMapper.writeValueAsString(populateCvDTO.getLangues()));
+            profile.setExperiences(objectMapper.writeValueAsString(populateCvDTO.getExperiences()));
+            profile.setEducations(objectMapper.writeValueAsString(populateCvDTO.getEducations()));
+            profile.setDomaines(objectMapper.writeValueAsString(populateCvDTO.getDomaines()));
+            profile.setNiveauEtude(populateCvDTO.getNiveauEtude());
+
+            return profilRepository.save(profile);
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de la mise à jour du profil: " + e.getMessage(), e);
+        }
     }
 }

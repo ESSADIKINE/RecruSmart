@@ -20,8 +20,20 @@ public class Profile {
     @Column(name = "utilisateur_id", unique = true, nullable = false)
     private String utilisateurId; // Clé étrangère vers users.id (ObjectId MongoDB)
 
+    @Column(name = "email")
+    private String email;
+
+    @Column(name = "linkedin_url")
+    private String linkedinUrl;
+
+    @Column(name = "github_url")
+    private String githubUrl;
+
+    @Column(name = "portfolio_url")
+    private String portfolioUrl;
+
     @Column(name = "cv_url")
-    private String urlCv; // URL du CV dans MinIO
+    private String urlCv; 
 
     @Column(columnDefinition = "TEXT")
     private String competences; // Compétences (JSON, Map<String, Integer> de 1 à 5)
@@ -46,6 +58,14 @@ public class Profile {
 
     public String getUtilisateurId() { return utilisateurId; }
     public void setUtilisateurId(String utilisateurId) { this.utilisateurId = utilisateurId; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getLinkedinUrl() { return linkedinUrl; }
+    public void setLinkedinUrl(String linkedinUrl) { this.linkedinUrl = linkedinUrl; }
+    public String getGithubUrl() { return githubUrl; }
+    public void setGithubUrl(String githubUrl) { this.githubUrl = githubUrl; }
+    public String getPortfolioUrl() { return portfolioUrl; }
+    public void setPortfolioUrl(String portfolioUrl) { this.portfolioUrl = portfolioUrl; }
     public String getUrlCv() { return urlCv; }
     public void setUrlCv(String urlCv) { this.urlCv = urlCv; }
     public String getCompetences() { return competences; }

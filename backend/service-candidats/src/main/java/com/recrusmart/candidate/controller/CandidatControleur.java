@@ -12,6 +12,8 @@ import java.util.List;
 
 import com.recrusmart.candidate.dto.PopulateCvDTO;
 import com.recrusmart.candidate.dto.UpdateProfileDTO;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.DecodedJWT;
 
 @RestController
 @RequestMapping("/candidats")
@@ -20,33 +22,36 @@ public class CandidatControleur {
     private CandidateService candidatService;
 
     @PostMapping("/profil")
-    public ResponseEntity<Void> creerProfil(@RequestBody ProfileDTO profilDTO) {
+    public ResponseEntity<Void> creerProfil(@RequestBody ProfileDTO profilDTO, @RequestHeader("Authorization") String token) {
+        TokenInfo tokenInfo = extractTokenInfo(token);
+        profilDTO.setUtilisateurId(tokenInfo.getUserId());
+        profilDTO.setEmail(tokenInfo.getEmail());
         System.out.println("[DEBUG] Appel à /candidats/profil avec: " + profilDTO);
         candidatService.creerProfil(profilDTO);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{utilisateurId}/cv")
-    public ResponseEntity<String> televerserCv(@PathVariable String utilisateurId, @RequestPart("fichier") MultipartFile fichier) {
-        System.out.println("[DEBUG] Appel à /candidats/" + utilisateurId + "/cv, fichier reçu: " + (fichier != null ? fichier.getOriginalFilename() : "null"));
-        String urlCv = candidatService.televerserCv(utilisateurId, fichier);
+    @PostMapping("/cv")
+    public ResponseEntity<String> televerserCv(@RequestHeader("Authorization") String token, @RequestPart("fichier") MultipartFile fichier) {
+        TokenInfo tokenInfo = extractTokenInfo(token);
+        String utilisateurId = tokenInfo.getUserId();
+        System.out.println("[DEBUG] Appel à /candidats/cv, fichier reçu: " + (fichier != null ? fichier.getOriginalFilename() : "null"));
+        String urlCv = candidatService.televerserCv(utilisateurId, fichier, token);
         return ResponseEntity.ok(urlCv);
     }
 
     @PostMapping("/candidature")
-    public ResponseEntity<Void> soumettreCandidature(@RequestParam String profilId, @RequestParam String offreId) {
-        candidatService.soumettreCandidature(profilId, offreId);
+    public ResponseEntity<Void> soumettreCandidature(@RequestParam String offreId, @RequestHeader("Authorization") String token) {
+        TokenInfo tokenInfo = extractTokenInfo(token);
+        String utilisateurId = tokenInfo.getUserId();
+        candidatService.soumettreCandidature(utilisateurId, offreId);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/televerser-cv")
-    public ResponseEntity<String> televerserCvV2(@RequestParam("utilisateurId") String utilisateurId, @RequestPart("fichier") MultipartFile fichier) {
-        String urlCv = candidatService.televerserCv(utilisateurId, fichier);
-        return ResponseEntity.ok(urlCv);
-    }
-
     @PostMapping("/remplir-cv")
-    public ResponseEntity<Void> remplirCv(@RequestBody PopulateCvDTO populateCvDTO) {
+    public ResponseEntity<Void> remplirCv(@RequestBody PopulateCvDTO populateCvDTO, @RequestHeader("Authorization") String token) {
+        TokenInfo tokenInfo = extractTokenInfo(token);
+        populateCvDTO.setId(tokenInfo.getUserId());
         System.out.println("[DEBUG] Payload reçu à /remplir-cv: " + populateCvDTO);
         if (populateCvDTO != null) {
             System.out.println("[DEBUG] Types: exp=" + (populateCvDTO.getExperiences() != null ? populateCvDTO.getExperiences().getClass() : "null") +
@@ -58,16 +63,12 @@ public class CandidatControleur {
         return ResponseEntity.ok().build();
     }
 
-    @PutMapping("/{id}/mettre-a-jour-profil")
-    public ResponseEntity<Void> mettreAJourProfil(@PathVariable String id, @RequestBody UpdateProfileDTO updateProfileDTO) {
-        candidatService.mettreAJourProfil(id, updateProfileDTO);
+    @PutMapping("/mettre-a-jour-profil")
+    public ResponseEntity<Void> mettreAJourProfil(@RequestBody UpdateProfileDTO updateProfileDTO, @RequestHeader("Authorization") String token) {
+        TokenInfo tokenInfo = extractTokenInfo(token);
+        String utilisateurId = tokenInfo.getUserId();
+        candidatService.mettreAJourProfil(utilisateurId, updateProfileDTO);
         return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/upload-test")
-    public ResponseEntity<String> uploadTest(@RequestPart("fichier") MultipartFile fichier) {
-        System.out.println("[DEBUG] Appel à /candidats/upload-test, fichier reçu: " + (fichier != null ? fichier.getOriginalFilename() : "null"));
-        return ResponseEntity.ok("OK: " + (fichier != null ? fichier.getOriginalFilename() : "null"));
     }
 
     @GetMapping("/profils")
@@ -76,12 +77,61 @@ public class CandidatControleur {
         return ResponseEntity.ok(profils);
     }
 
-    @GetMapping("/{utilisateurId}")
-    public ResponseEntity<Profile> getProfilById(@PathVariable String utilisateurId) {
+    @GetMapping("/profil")
+    public ResponseEntity<Profile> getProfil(@RequestHeader("Authorization") String token) {
+        TokenInfo tokenInfo = extractTokenInfo(token);
+        String utilisateurId = tokenInfo.getUserId();
         Profile profil = candidatService.getProfilByUtilisateurId(utilisateurId);
         if (profil == null) {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(profil);
+    }
+
+    @PostMapping("/populate-cv")
+    public ResponseEntity<Profile> populateCv(@RequestBody PopulateCvDTO populateCvDTO, @RequestHeader("Authorization") String token) {
+        try {
+            TokenInfo tokenInfo = extractTokenInfo(token);
+            populateCvDTO.setEmail(tokenInfo.getEmail());
+            populateCvDTO.setId(tokenInfo.getUserId());
+            
+            Profile profile = candidatService.populateCv(populateCvDTO);
+            return ResponseEntity.ok(profile);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    private static class TokenInfo {
+        private String email;
+        private String userId;
+
+        public TokenInfo(String email, String userId) {
+            this.email = email;
+            this.userId = userId;
+        }
+
+        public String getEmail() { return email; }
+        public String getUserId() { return userId; }
+    }
+
+    private TokenInfo extractTokenInfo(String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+            try {
+                DecodedJWT jwt = JWT.decode(token);
+                String email = jwt.getClaim("email").asString();
+                String userId = jwt.getClaim("id").asString();
+                
+                if (email == null || userId == null) {
+                    throw new RuntimeException("Token missing required claims");
+                }
+                
+                return new TokenInfo(email, userId);
+            } catch (Exception e) {
+                throw new RuntimeException("Invalid token: " + e.getMessage());
+            }
+        }
+        throw new RuntimeException("No token provided");
     }
 }

@@ -7,6 +7,10 @@ import java.util.Map;
 @Data
 public class PopulateCvDTO {
     private String id; // Identifiant de l'utilisateur (ObjectId MongoDB)
+    private String email;
+    private String linkedinUrl;
+    private String githubUrl;
+    private String portfolioUrl;
     private Map<String, Map<String, Object>> experiences;
     private Map<String, Integer> competences;
     private Map<String, String> langues;
@@ -17,6 +21,14 @@ public class PopulateCvDTO {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getLinkedinUrl() { return linkedinUrl; }
+    public void setLinkedinUrl(String linkedinUrl) { this.linkedinUrl = linkedinUrl; }
+    public String getGithubUrl() { return githubUrl; }
+    public void setGithubUrl(String githubUrl) { this.githubUrl = githubUrl; }
+    public String getPortfolioUrl() { return portfolioUrl; }
+    public void setPortfolioUrl(String portfolioUrl) { this.portfolioUrl = portfolioUrl; }
     public Map<String, Map<String, Object>> getExperiences() { return experiences; }
     public void setExperiences(Map<String, Map<String, Object>> experiences) { this.experiences = experiences; }
     public Map<String, Integer> getCompetences() { return competences; }

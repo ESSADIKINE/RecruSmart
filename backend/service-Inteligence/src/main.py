@@ -115,7 +115,7 @@ async def process_cv_message(message):
             
         candidat_id = data.get("candidatId")
         cv_url = data.get("cvUrl")
-        token = data.get("token")
+        token = data.get("token")  # Récupérer le token du message
         
         if not candidat_id or not cv_url:
             logger.error(f"Message incomplet: {data}")
@@ -126,10 +126,10 @@ async def process_cv_message(message):
             logger.info(f"Candidat {candidat_id} déjà traité, message ignoré")
             return
 
-        # Si pas de token dans le message, on utilise un token par défaut pour le service
+        # Vérifier si le token est présent
         if not token:
-            token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NGI1OWI2NTRhZmFjOTJjYzg0OTM0MSIsImVtYWlsIjoicmVjcnV0ZXVyMUBnbWFpbC5jb20iLCJyb2xlIjoiUkVDUlVURVVSIiwiaWF0IjoxNzQ5ODI0MzU3LCJleHAiOjE3NDk5MTA3NTd9.VEBp-Kc7lDSj73K_F40MhllqzKdpjAZG4PJewXtd5CY"
-            logger.info(f"Utilisation du token par défaut pour le candidat {candidat_id}")
+            logger.error("Token manquant dans le message")
+            return
 
         # Extraire les données du CV
         result = parse_cv(cv_url)
@@ -137,23 +137,22 @@ async def process_cv_message(message):
         # Préparer les données pour l'API
         payload = {
             "id": candidat_id,
+            "email": data.get("email"),
             "experiences": result.get("experiences", {}),
             "competences": result.get("competences", {}),
             "langues": result.get("langues", {}),
-            "educations": result.get("educations", {}),
-            "anneesExperience": result.get("annees_experience", 0)
+            "educations": result.get("educations", {})
         }
 
-        # Envoyer les données au service Candidat
+        # Envoyer les données au service Candidat avec le token reçu
         async with aiohttp.ClientSession() as session:
             async with session.post(
                 CANDIDATS_POPULATE_CV_URL,
                 json=payload,
-                headers={"Authorization": f"Bearer {token}"}
+                headers={"Authorization": token}  # Utiliser le token reçu
             ) as response:
                 if response.status == 200:
                     logger.info(f"CV traité avec succès pour le candidat {candidat_id}")
-                    # Ajouter le candidat à la liste des candidats traités
                     processed_candidates.add(candidat_id)
                 else:
                     logger.error(f"Erreur lors du traitement du CV: {await response.text()}")
@@ -234,11 +233,6 @@ async def shutdown_event():
     """Événement d'arrêt de l'application"""
     if rabbitmq_connection:
         await rabbitmq_connection.close()
-
-@app.get("/health")
-async def health_check():
-    """Endpoint de santé"""
-    return {"status": "healthy"}
 
 @app.post("/score/{offre_id}")
 async def score_offre(offre_id: str, background_tasks: BackgroundTasks, authorization: str = Header(...)):

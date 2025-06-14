@@ -11,6 +11,7 @@ const OffreSchema = new mongoose.Schema({
   domaine: { type: String },
   langue: { type: String },
   niveauEtude: { type: String },
+  anneesExperience: { type: Number, default: 0 },
   recruteurId: { type: String, required: true },
 });
 

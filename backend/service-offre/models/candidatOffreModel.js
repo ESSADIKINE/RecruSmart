@@ -2,7 +2,11 @@ const mongoose = require('mongoose');
 
 const CandidatSchema = new mongoose.Schema({
     utilisateurId: { type: String, required: true },
-    cv: { type: String },
+    email: { type: String, required: true },
+    linkedinUrl: { type: String },
+    githubUrl: { type: String },
+    portfolioUrl: { type: String },
+    cv: { type: String, required: true },
     score: { type: Number },
     // Informations du profil
     competences: { type: String }, // JSON stringifié

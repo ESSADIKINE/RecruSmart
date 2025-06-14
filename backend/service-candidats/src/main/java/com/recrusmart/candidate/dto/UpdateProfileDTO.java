@@ -6,6 +6,9 @@ import java.util.Map;
 
 @Data
 public class UpdateProfileDTO {
+    private String linkedinUrl;
+    private String githubUrl;
+    private String portfolioUrl;
     private Map<String, Integer> competences;
     private Map<String, String> langues;
     private Integer anneesExperience;
@@ -14,6 +17,12 @@ public class UpdateProfileDTO {
     private List<String> domaines;
     private String niveauEtude;
 
+    public String getLinkedinUrl() { return linkedinUrl; }
+    public void setLinkedinUrl(String linkedinUrl) { this.linkedinUrl = linkedinUrl; }
+    public String getGithubUrl() { return githubUrl; }
+    public void setGithubUrl(String githubUrl) { this.githubUrl = githubUrl; }
+    public String getPortfolioUrl() { return portfolioUrl; }
+    public void setPortfolioUrl(String portfolioUrl) { this.portfolioUrl = portfolioUrl; }
     public Map<String, Integer> getCompetences() { return competences; }
     public void setCompetences(Map<String, Integer> competences) { this.competences = competences; }
     public Map<String, String> getLangues() { return langues; }

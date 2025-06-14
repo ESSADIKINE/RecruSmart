@@ -22,7 +22,15 @@ exports.login = async (req, res, next) => {
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    const token = jwt.sign(
+      { 
+        id: user._id,
+        email: user.email,
+        role: user.role 
+      }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: '24h' }
+    );
     res.json({ user, token });
   } catch (err) {
     next(err);
