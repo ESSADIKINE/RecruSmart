@@ -4,7 +4,6 @@ services:
   api-gateway:
     build: 
       context: ./api-gateway
-      dockerfile: Dockerfile
     ports:
       - "80:80"
     depends_on:
@@ -38,6 +37,10 @@ services:
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root
       - RABBITMQ_URL=amqp://rabbitmq
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
     depends_on:
       - mysql
       - rabbitmq
@@ -63,8 +66,11 @@ services:
       - "8082:8082"
     environment:
       - RABBITMQ_URL=amqp://rabbitmq
+      - RABBITMQ_HOST=rabbitmq
+      - CANDIDATS_POPULATE_CV_URL=http://candidat-service:8084/api/candidats/remplir-cv
     depends_on:
       - rabbitmq
+      - candidat-service
     networks:
       - recrusmart-network
 
@@ -80,7 +86,7 @@ services:
   mysql:
     image: mysql:8.0
     ports:
-      - "3306:3306"
+      - "3307:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_DATABASE=recrusmart_candidates
@@ -106,4 +112,4 @@ networks:
 volumes:
   mongodb_data:
   mysql_data:
-  rabbitmq_data: 
+  rabbitmq_data:

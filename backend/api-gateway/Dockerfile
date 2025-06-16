@@ -1,17 +1,18 @@
+# Image de base légère avec NGINX
 FROM nginx:alpine
 
-# Copy custom nginx configuration
+# Copie du fichier de configuration nginx.conf personnalisé
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Create directory for custom error pages
+# Création du dossier pour les pages d'erreur personnalisées
 RUN mkdir -p /usr/share/nginx/html
 
-# Copy custom error pages
+# Copie des pages d'erreur personnalisées
 COPY error_pages/404.html /usr/share/nginx/html/404.html
 COPY error_pages/50x.html /usr/share/nginx/html/50x.html
 
-# Expose port 80
+# Exposition du port 80 pour l'accès HTTP
 EXPOSE 80
 
-# Start Nginx
-CMD ["nginx", "-g", "daemon off;"] 
+# Commande de démarrage du serveur NGINX
+CMD ["nginx", "-g", "daemon off;"]

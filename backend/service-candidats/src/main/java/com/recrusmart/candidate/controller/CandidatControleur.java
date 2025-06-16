@@ -30,6 +30,10 @@ public class CandidatControleur {
     @PostMapping("/cv")
     public ResponseEntity<?> televerserCv(@RequestHeader("Authorization") String token, @RequestPart("fichier") MultipartFile fichier) {
         try {
+            logger.info("[UPLOAD-CV] Received request with token length={}, file={}", 
+                token != null ? token.length() : 0,
+                fichier != null ? fichier.getOriginalFilename() : "null");
+                
             TokenInfo tokenInfo = extractTokenInfo(token);
             
             // Vérifier si l'utilisateur est un candidat
@@ -47,7 +51,7 @@ public class CandidatControleur {
             String urlCv = candidatService.televerserCv(utilisateurId, fichier, token);
             return ResponseEntity.ok(urlCv);
         } catch (Exception e) {
-            logger.error("[UPLOAD-CV] Erreur lors du téléversement du CV: {}", e.getMessage());
+            logger.error("[UPLOAD-CV] Erreur lors du téléversement du CV: {}", e.getMessage(), e);
             Map<String, String> error = new HashMap<>();
             error.put("error", "Erreur lors du téléversement du CV: " + e.getMessage());
             return ResponseEntity.badRequest().body(error);
@@ -150,6 +154,41 @@ public class CandidatControleur {
             logger.error("[GET-PROFILE] Erreur lors de la récupération du profil: {}", e.getMessage());
             Map<String, String> error = new HashMap<>();
             error.put("error", "Erreur lors de la récupération du profil: " + e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    @GetMapping("/test")
+    public ResponseEntity<?> testEndpoint(@RequestHeader(value = "Authorization", required = false) String token) {
+        try {
+            logger.info("[TEST] Test endpoint called");
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("status", "success");
+            response.put("message", "Service Candidat is working!");
+            response.put("timestamp", new java.util.Date().toString());
+            
+            if (token != null) {
+                try {
+                    TokenInfo tokenInfo = extractTokenInfo(token);
+                    Map<String, String> tokenInfoMap = new HashMap<>();
+                    tokenInfoMap.put("userId", tokenInfo.getUserId());
+                    tokenInfoMap.put("email", tokenInfo.getEmail());
+                    tokenInfoMap.put("role", tokenInfo.getRole());
+                    response.put("tokenInfo", tokenInfoMap);
+                } catch (Exception e) {
+                    logger.warn("[TEST] Token validation failed: {}", e.getMessage());
+                    response.put("tokenInfo", "Invalid token");
+                }
+            }
+            
+            logger.info("[TEST] Sending response: {}", response);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("[TEST] Error in test endpoint: {}", e.getMessage(), e);
+            Map<String, String> error = new HashMap<>();
+            error.put("status", "error");
+            error.put("message", "Error in test endpoint: " + e.getMessage());
             return ResponseEntity.badRequest().body(error);
         }
     }
