@@ -16,7 +16,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.DecodedJWT;
 
 @RestController
-@RequestMapping("/candidats")
+@RequestMapping("/api/candidats")
 public class CandidatControleur {
     @Autowired
     private CandidateService candidatService;
@@ -33,11 +33,30 @@ public class CandidatControleur {
 
     @PostMapping("/cv")
     public ResponseEntity<String> televerserCv(@RequestHeader("Authorization") String token, @RequestPart("fichier") MultipartFile fichier) {
-        TokenInfo tokenInfo = extractTokenInfo(token);
-        String utilisateurId = tokenInfo.getUserId();
-        System.out.println("[DEBUG] Appel à /candidats/cv, fichier reçu: " + (fichier != null ? fichier.getOriginalFilename() : "null"));
-        String urlCv = candidatService.televerserCv(utilisateurId, fichier, token);
-        return ResponseEntity.ok(urlCv);
+        try {
+            TokenInfo tokenInfo = extractTokenInfo(token);
+            String utilisateurId = tokenInfo.getUserId();
+            String email = tokenInfo.getEmail();
+            System.out.println("[DEBUG] Appel à /candidats/cv, fichier reçu: " + (fichier != null ? fichier.getOriginalFilename() : "null"));
+            
+            // Check if profile exists, if not create one
+            Profile existingProfile = candidatService.getProfilByUtilisateurId(utilisateurId);
+            if (existingProfile == null) {
+                // Create a new profile with basic information
+                ProfileDTO newProfile = new ProfileDTO();
+                newProfile.setUtilisateurId(utilisateurId);
+                newProfile.setEmail(email);
+                candidatService.creerProfil(newProfile);
+            }
+            
+            String urlCv = candidatService.televerserCv(utilisateurId, fichier, token);
+            return ResponseEntity.ok(urlCv);
+        } catch (RuntimeException e) {
+            // If token is invalid or missing claims, try to proceed without profile creation
+            System.out.println("[WARN] Token validation failed: " + e.getMessage() + ". Proceeding without profile creation.");
+            String urlCv = candidatService.televerserCv(null, fichier, token);
+            return ResponseEntity.ok(urlCv);
+        }
     }
 
     @PostMapping("/candidature")
@@ -50,17 +69,23 @@ public class CandidatControleur {
 
     @PostMapping("/remplir-cv")
     public ResponseEntity<Void> remplirCv(@RequestBody PopulateCvDTO populateCvDTO, @RequestHeader("Authorization") String token) {
-        TokenInfo tokenInfo = extractTokenInfo(token);
-        populateCvDTO.setId(tokenInfo.getUserId());
-        System.out.println("[DEBUG] Payload reçu à /remplir-cv: " + populateCvDTO);
-        if (populateCvDTO != null) {
-            System.out.println("[DEBUG] Types: exp=" + (populateCvDTO.getExperiences() != null ? populateCvDTO.getExperiences().getClass() : "null") +
-                ", comp=" + (populateCvDTO.getCompetences() != null ? populateCvDTO.getCompetences().getClass() : "null") +
-                ", lang=" + (populateCvDTO.getLangues() != null ? populateCvDTO.getLangues().getClass() : "null") +
-                ", edu=" + (populateCvDTO.getEducations() != null ? populateCvDTO.getEducations().getClass() : "null"));
+        try {
+            TokenInfo tokenInfo = extractTokenInfo(token);
+            populateCvDTO.setId(tokenInfo.getUserId());
+            populateCvDTO.setEmail(tokenInfo.getEmail());
+            System.out.println("[DEBUG] Payload reçu à /remplir-cv: " + populateCvDTO);
+            if (populateCvDTO != null) {
+                System.out.println("[DEBUG] Types: exp=" + (populateCvDTO.getExperiences() != null ? populateCvDTO.getExperiences().getClass() : "null") +
+                    ", comp=" + (populateCvDTO.getCompetences() != null ? populateCvDTO.getCompetences().getClass() : "null") +
+                    ", lang=" + (populateCvDTO.getLangues() != null ? populateCvDTO.getLangues().getClass() : "null") +
+                    ", edu=" + (populateCvDTO.getEducations() != null ? populateCvDTO.getEducations().getClass() : "null"));
+            }
+            candidatService.remplirCv(populateCvDTO);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            System.out.println("[ERROR] Erreur lors du remplissage du CV: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
         }
-        candidatService.remplirCv(populateCvDTO);
-        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/mettre-a-jour-profil")
