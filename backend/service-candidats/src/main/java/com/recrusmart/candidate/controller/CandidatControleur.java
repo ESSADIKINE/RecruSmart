@@ -20,7 +20,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.DecodedJWT;
 
 @RestController
-@RequestMapping("/api/candidats")
+@RequestMapping("/candidats")
 public class CandidatControleur {
     private static final Logger logger = LoggerFactory.getLogger(CandidatControleur.class);
     
@@ -35,15 +35,6 @@ public class CandidatControleur {
                 fichier != null ? fichier.getOriginalFilename() : "null");
                 
             TokenInfo tokenInfo = extractTokenInfo(token);
-            
-            // Vérifier si l'utilisateur est un candidat
-            if (!"CANDIDAT".equals(tokenInfo.getRole())) {
-                logger.error("[UPLOAD-CV] Accès refusé: utilisateur n'est pas un candidat");
-                Map<String, String> error = new HashMap<>();
-                error.put("error", "Seuls les candidats peuvent téléverser un CV");
-                return ResponseEntity.status(403).body(error);
-            }
-            
             String utilisateurId = tokenInfo.getUserId();
             logger.info("[UPLOAD-CV] Téléversement du CV pour utilisateurId={}, fichier={}", 
                 utilisateurId, fichier.getOriginalFilename());
@@ -158,39 +149,13 @@ public class CandidatControleur {
         }
     }
 
-    @GetMapping("/test")
-    public ResponseEntity<?> testEndpoint(@RequestHeader(value = "Authorization", required = false) String token) {
-        try {
-            logger.info("[TEST] Test endpoint called");
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("status", "success");
-            response.put("message", "Service Candidat is working!");
-            response.put("timestamp", new java.util.Date().toString());
-            
-            if (token != null) {
-                try {
-                    TokenInfo tokenInfo = extractTokenInfo(token);
-                    Map<String, String> tokenInfoMap = new HashMap<>();
-                    tokenInfoMap.put("userId", tokenInfo.getUserId());
-                    tokenInfoMap.put("email", tokenInfo.getEmail());
-                    tokenInfoMap.put("role", tokenInfo.getRole());
-                    response.put("tokenInfo", tokenInfoMap);
-                } catch (Exception e) {
-                    logger.warn("[TEST] Token validation failed: {}", e.getMessage());
-                    response.put("tokenInfo", "Invalid token");
-                }
-            }
-            
-            logger.info("[TEST] Sending response: {}", response);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            logger.error("[TEST] Error in test endpoint: {}", e.getMessage(), e);
-            Map<String, String> error = new HashMap<>();
-            error.put("status", "error");
-            error.put("message", "Error in test endpoint: " + e.getMessage());
-            return ResponseEntity.badRequest().body(error);
-        }
+    @GetMapping("/work")
+    public ResponseEntity<?> testEndpoint() {
+        logger.info("[TEST] Test endpoint called");
+        Map<String, String> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "Candidate service is working!");
+        return ResponseEntity.ok(response);
     }
 
     private static class TokenInfo {
