@@ -12,11 +12,14 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
 
 import java.io.IOException;
 import java.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class StorageService {
     private final S3Client s3Client;
     private final S3Presigner s3Presigner;
+    private static final Logger logger = LoggerFactory.getLogger(StorageService.class);
 
     @Value("${cloudflare.r2.bucket.name}")
     private String bucketName;
@@ -71,5 +74,21 @@ public class StorageService {
                 .key(path)
                 .build();
         s3Client.deleteObject(deleteObjectRequest);
+    }
+
+    /**
+     * Supprime un fichier CV de Cloudflare R2.
+     */
+    public void deleteCvFile(String chemin) {
+        try {
+            s3Client.deleteObject(builder -> builder
+                .bucket("recrusmart")
+                .key(chemin)
+                .build());
+            logger.info("[DELETE-CV] Fichier supprimé de Cloudflare R2: {}", chemin);
+        } catch (Exception e) {
+            logger.error("[DELETE-CV] Erreur lors de la suppression du fichier: {}", e.getMessage());
+            throw new RuntimeException("Erreur lors de la suppression du fichier: " + e.getMessage());
+        }
     }
 }

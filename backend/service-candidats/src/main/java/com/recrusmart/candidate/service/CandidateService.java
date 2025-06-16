@@ -25,6 +25,8 @@ import org.springframework.beans.factory.annotation.Value;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import java.util.Date;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.DecodedJWT;
 
 @Service
 public class CandidateService {
@@ -56,36 +58,108 @@ public class CandidateService {
      * Crée un nouveau profil candidat à partir d'un DTO.
      */
     public Profile creerProfil(ProfileDTO profilDTO) {
-        Profile profil = new Profile();
-        profil.setUtilisateurId(profilDTO.getUtilisateurId());
-        profil.setEmail(profilDTO.getEmail());
-        try {
-            profil.setCompetences(objectMapper.writeValueAsString(profilDTO.getCompetences()));
-            profil.setLangues(objectMapper.writeValueAsString(profilDTO.getLangues()));
-            profil.setExperiences(objectMapper.writeValueAsString(profilDTO.getExperiences()));
-            profil.setEducations(objectMapper.writeValueAsString(profilDTO.getEducations()));
-            profil.setAnneesExperience(profilDTO.getAnneesExperience());
-            if (profilDTO.getDomaines() != null)
-                profil.setDomaines(objectMapper.writeValueAsString(profilDTO.getDomaines()));
-            if (profilDTO.getNiveauEtude() != null)
-                profil.setNiveauEtude(profilDTO.getNiveauEtude());
-        } catch (Exception e) {
-            throw new RuntimeException("Erreur de sérialisation JSON : " + e.getMessage(), e);
+        // Vérifier si un profil existe déjà pour cet utilisateur
+        Profile existingProfile = profilRepository.findByUtilisateurId(profilDTO.getUtilisateurId());
+        if (existingProfile != null) {
+            logger.warn("[CREATE-PROFILE] Profil déjà existant pour utilisateurId={}", profilDTO.getUtilisateurId());
+            throw new RuntimeException("Un profil existe déjà pour cet utilisateur");
         }
-        return profilRepository.save(profil);
+
+        try {
+            Profile profil = new Profile();
+            profil.setUtilisateurId(profilDTO.getUtilisateurId());
+            profil.setEmail(profilDTO.getEmail());
+
+            // Initialiser les champs JSON avec des objets vides si null
+            if (profilDTO.getCompetences() == null) {
+                profil.setCompetences("{}");
+            } else {
+                profil.setCompetences(objectMapper.writeValueAsString(profilDTO.getCompetences()));
+            }
+
+            if (profilDTO.getLangues() == null) {
+                profil.setLangues("{}");
+            } else {
+                profil.setLangues(objectMapper.writeValueAsString(profilDTO.getLangues()));
+            }
+
+            if (profilDTO.getExperiences() == null) {
+                profil.setExperiences("{}");
+            } else {
+                profil.setExperiences(objectMapper.writeValueAsString(profilDTO.getExperiences()));
+            }
+
+            if (profilDTO.getEducations() == null) {
+                profil.setEducations("{}");
+            } else {
+                profil.setEducations(objectMapper.writeValueAsString(profilDTO.getEducations()));
+            }
+
+            profil.setAnneesExperience(profilDTO.getAnneesExperience() != null ? profilDTO.getAnneesExperience() : 0);
+
+            if (profilDTO.getDomaines() != null) {
+                profil.setDomaines(objectMapper.writeValueAsString(profilDTO.getDomaines()));
+            } else {
+                profil.setDomaines("[]");
+            }
+
+            if (profilDTO.getNiveauEtude() != null) {
+                profil.setNiveauEtude(profilDTO.getNiveauEtude());
+            }
+
+            logger.info("[CREATE-PROFILE] Création du profil pour utilisateurId={}", profilDTO.getUtilisateurId());
+            return profilRepository.save(profil);
+        } catch (Exception e) {
+            logger.error("[CREATE-PROFILE] Erreur lors de la création du profil: {}", e.getMessage(), e);
+            throw new RuntimeException("Erreur lors de la création du profil: " + e.getMessage());
+        }
     }
 
     /**
-     * Téléverse le CV du candidat, le stocke dans Cloudflare R2 et envoie un message RabbitMQ à l'IA.
+     * Téléverse le CV du candidat, crée le profil si nécessaire, et envoie un message RabbitMQ à l'IA.
      */
     public String televerserCv(String idUtilisateur, MultipartFile fichier, String token) {
         logger.info("[UPLOAD-CV] Reçu pour utilisateurId={}", idUtilisateur);
+        
+        // Extraire l'email du token
+        String email = null;
+        try {
+            DecodedJWT jwt = JWT.decode(token.replace("Bearer ", ""));
+            email = jwt.getClaim("email").asString();
+            if (email == null) {
+                logger.error("[UPLOAD-CV] Email manquant dans le token");
+                throw new RuntimeException("Email manquant dans le token");
+            }
+        } catch (Exception e) {
+            logger.error("[UPLOAD-CV] Erreur lors de l'extraction de l'email du token: {}", e.getMessage());
+            throw new RuntimeException("Erreur lors de l'extraction de l'email du token: " + e.getMessage());
+        }
+        
+        // Vérifier si le profil existe, sinon le créer
         Profile profil = profilRepository.findByUtilisateurId(idUtilisateur);
         if (profil == null) {
-            logger.error("[UPLOAD-CV] Profil introuvable pour utilisateurId={}", idUtilisateur);
-            throw new RuntimeException("Profil introuvable pour l'utilisateur : " + idUtilisateur);
+            logger.info("[UPLOAD-CV] Création automatique du profil pour utilisateurId={}, email={}", idUtilisateur, email);
+            profil = new Profile();
+            profil.setUtilisateurId(idUtilisateur);
+            profil.setEmail(email);
+            profil.setCompetences("{}");
+            profil.setLangues("{}");
+            profil.setExperiences("{}");
+            profil.setEducations("{}");
+            profil.setDomaines("[]");
+            profil.setAnneesExperience(0);
+            profil.setNiveauEtude("");
+            profil.setLinkedinUrl("");
+            profil.setGithubUrl("");
+            profil.setPortfolioUrl("");
+            profil = profilRepository.save(profil);
+        } else if (profil.getEmail() == null) {
+            // Mettre à jour l'email si le profil existe mais n'a pas d'email
+            logger.info("[UPLOAD-CV] Mise à jour de l'email pour le profil existant utilisateurId={}, email={}", idUtilisateur, email);
+            profil.setEmail(email);
+            profil = profilRepository.save(profil);
         }
-        logger.info("[UPLOAD-CV] Profil trouvé: {}", profil);
+
         String cheminCv = "cvs/" + idUtilisateur + "/" + UUID.randomUUID() + ".pdf";
         String urlCv = null;
         try {
@@ -95,6 +169,7 @@ public class CandidateService {
             logger.error("[UPLOAD-CV] Erreur lors de l'upload sur Cloudflare R2: {}", e.getMessage(), e);
             throw e;
         }
+
         profil.setUrlCv(urlCv);
         profilRepository.save(profil);
         logger.info("[UPLOAD-CV] Profil mis à jour avec urlCv");
@@ -104,6 +179,7 @@ public class CandidateService {
         evenement.put("candidatId", idUtilisateur);
         evenement.put("cvUrl", urlCv);
         evenement.put("token", token);
+        evenement.put("email", email);
         try {
             String message = objectMapper.writeValueAsString(evenement);
             rabbitTemplate.convertAndSend("recrusmart.events", "Candidat.CV.Recu", message);
@@ -180,6 +256,8 @@ public class CandidateService {
             profil.setCompetences(objectMapper.writeValueAsString(populateCvDTO.getCompetences()));
             profil.setLangues(objectMapper.writeValueAsString(populateCvDTO.getLangues()));
             profil.setEducations(objectMapper.writeValueAsString(populateCvDTO.getEducations()));
+            profil.setDomaines(objectMapper.writeValueAsString(populateCvDTO.getDomaines()));
+            profil.setNiveauEtude(populateCvDTO.getNiveauEtude());
         } catch (Exception e) {
             throw new RuntimeException("Erreur de sérialisation JSON : " + e.getMessage(), e);
         }
@@ -209,10 +287,58 @@ public class CandidateService {
                 profil.setDomaines(objectMapper.writeValueAsString(updateProfileDTO.getDomaines()));
             if (updateProfileDTO.getNiveauEtude() != null)
                 profil.setNiveauEtude(updateProfileDTO.getNiveauEtude());
+            if (updateProfileDTO.getLinkedinUrl() != null)
+                profil.setLinkedinUrl(updateProfileDTO.getLinkedinUrl());
+            if (updateProfileDTO.getGithubUrl() != null)
+                profil.setGithubUrl(updateProfileDTO.getGithubUrl());
+            if (updateProfileDTO.getPortfolioUrl() != null)
+                profil.setPortfolioUrl(updateProfileDTO.getPortfolioUrl());
         } catch (Exception e) {
             throw new RuntimeException("Erreur de sérialisation JSON : " + e.getMessage(), e);
         }
         profilRepository.save(profil);
+    }
+
+    /**
+     * Met à jour le CV du candidat et supprime l'ancien CV de Cloudflare R2.
+     */
+    public String mettreAJourCv(String idUtilisateur, MultipartFile fichier) {
+        logger.info("[UPDATE-CV] Mise à jour du CV pour utilisateurId={}", idUtilisateur);
+        
+        Profile profil = profilRepository.findByUtilisateurId(idUtilisateur);
+        if (profil == null) {
+            throw new RuntimeException("Profil introuvable pour l'utilisateur : " + idUtilisateur);
+        }
+
+        // Supprimer l'ancien CV de Cloudflare R2 si existe
+        if (profil.getUrlCv() != null && !profil.getUrlCv().isEmpty()) {
+            try {
+                String ancienChemin = profil.getUrlCv().substring(profil.getUrlCv().lastIndexOf("/") + 1);
+                serviceStockage.deleteCvFile("cvs/" + idUtilisateur + "/" + ancienChemin);
+                logger.info("[UPDATE-CV] Ancien CV supprimé de Cloudflare R2");
+            } catch (Exception e) {
+                logger.error("[UPDATE-CV] Erreur lors de la suppression de l'ancien CV: {}", e.getMessage());
+                // Continue même si la suppression échoue
+            }
+        }
+
+        // Uploader le nouveau CV
+        String cheminCv = "cvs/" + idUtilisateur + "/" + UUID.randomUUID() + ".pdf";
+        String urlCv = null;
+        try {
+            urlCv = serviceStockage.uploadCvFile(cheminCv, fichier);
+            logger.info("[UPDATE-CV] Nouveau CV uploadé sur Cloudflare R2: {}", urlCv);
+        } catch (Exception e) {
+            logger.error("[UPDATE-CV] Erreur lors de l'upload sur Cloudflare R2: {}", e.getMessage(), e);
+            throw e;
+        }
+
+        // Mettre à jour le profil avec la nouvelle URL du CV
+        profil.setUrlCv(urlCv);
+        profilRepository.save(profil);
+        logger.info("[UPDATE-CV] Profil mis à jour avec nouvelle urlCv");
+
+        return urlCv;
     }
 
     public List<Profile> getAllProfils() {

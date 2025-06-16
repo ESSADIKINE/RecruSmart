@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    build: 
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - auth-service
+      - candidat-service
+      - offre-service
+      - intelligence-service
+    networks:
+      - recrusmart-network
+
+  auth-service:
+    build: ./service-authentification
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/recrusmart_auth
+      - JWT_SECRET=your_jwt_secret
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      - mongodb
+      - rabbitmq
+    networks:
+      - recrusmart-network
+
+  candidat-service:
+    build: ./service-candidats
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/recrusmart_candidates
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      - mysql
+      - rabbitmq
+    networks:
+      - recrusmart-network
+
+  offre-service:
+    build: ./service-offre
+    ports:
+      - "8081:8081"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/recrusmart_offres
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      - mongodb
+      - rabbitmq
+    networks:
+      - recrusmart-network
+
+  intelligence-service:
+    build: ./service-Inteligence
+    ports:
+      - "8082:8082"
+    environment:
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      - rabbitmq
+    networks:
+      - recrusmart-network
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - recrusmart-network
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=recrusmart_candidates
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - recrusmart-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - recrusmart-network
+
+networks:
+  recrusmart-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  mysql_data:
+  rabbitmq_data: 
