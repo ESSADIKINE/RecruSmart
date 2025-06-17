@@ -1,110 +1,100 @@
-version: '3.8'
-
 services:
+  #######################
+  # Reverse-proxy / API #
+  #######################
   api-gateway:
-    build: 
-      context: ./api-gateway
+    build: ./api-gateway
     ports:
       - "80:80"
+    env_file: .env
     depends_on:
       - auth-service
       - candidat-service
       - offre-service
       - intelligence-service
-    networks:
-      - recrusmart-network
+    networks: [recrusmart-network]
+    restart: unless-stopped
 
+  #################
+  #   NODE apps   #
+  #################
   auth-service:
     build: ./service-authentification
-    ports:
-      - "5000:5000"
+    ports: ["5000:5000"]
+    env_file: .env
     environment:
-      - MONGODB_URI=mongodb://mongodb:27017/recrusmart_auth
-      - JWT_SECRET=your_jwt_secret
-      - RABBITMQ_URL=amqp://rabbitmq
-    depends_on:
-      - mongodb
-      - rabbitmq
-    networks:
-      - recrusmart-network
-
-  candidat-service:
-    build: ./service-candidats
-    ports:
-      - "8084:8084"
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/recrusmart_candidates
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
-      - RABBITMQ_URL=amqp://rabbitmq
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
-      - SPRING_RABBITMQ_USERNAME=guest
-      - SPRING_RABBITMQ_PASSWORD=guest
-    depends_on:
-      - mysql
-      - rabbitmq
-    networks:
-      - recrusmart-network
+      MONGO_URI: mongodb://mongodb:27017/recrusmart_auth
+      JWT_SECRET: ${JWT_SECRET}
+      RABBITMQ_URL: amqp://rabbitmq
+    depends_on: [mongodb, rabbitmq]
+    networks: [recrusmart-network]
+    restart: unless-stopped
 
   offre-service:
     build: ./service-offre
-    ports:
-      - "8081:8081"
+    ports: ["8081:8081"]
+    env_file: .env
     environment:
-      - MONGODB_URI=mongodb://mongodb:27017/recrusmart_offres
-      - RABBITMQ_URL=amqp://rabbitmq
-    depends_on:
-      - mongodb
-      - rabbitmq
-    networks:
-      - recrusmart-network
+      MONGO_URI: mongodb://mongodb:27017/recrusmart_offres
+      RABBITMQ_URL: amqp://rabbitmq
+    depends_on: [mongodb, rabbitmq]
+    networks: [recrusmart-network]
+    restart: unless-stopped
 
   intelligence-service:
     build: ./service-Inteligence
-    ports:
-      - "8082:8082"
-    environment:
-      - RABBITMQ_URL=amqp://rabbitmq
-      - RABBITMQ_HOST=rabbitmq
-      - CANDIDATS_POPULATE_CV_URL=http://candidat-service:8084/api/candidats/remplir-cv
-    depends_on:
-      - rabbitmq
-      - candidat-service
-    networks:
-      - recrusmart-network
+    ports: ["8082:8082"]
+    env_file: .env
+    depends_on: [rabbitmq, candidat-service]
+    networks: [recrusmart-network]
+    restart: unless-stopped
 
+  #####################
+  #   SPRING Boot     #
+  #####################
+  candidat-service:
+    build: ./service-candidats
+    ports: ["8084:8084"]
+    env_file: .env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DB}
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASS}
+      OFFRE_BASE_URL: http://api-gateway/api/offres
+    depends_on: [mysql, rabbitmq]
+    networks: [recrusmart-network]
+    restart: unless-stopped
+
+  #####################
+  #   INFRASTRUCTURE  #
+  #####################
   mongodb:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    networks:
-      - recrusmart-network
+    image: mongo:8
+    ports: ["27017:27017"]
+    volumes: [mongodb_data:/data/db]
+    networks: [recrusmart-network]
+    restart: unless-stopped
 
   mysql:
     image: mysql:8.0
-    ports:
-      - "3307:3306"
+    ports: ["3307:3306"]
     environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=recrusmart_candidates
-    volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - recrusmart-network
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASS}
+      MYSQL_DATABASE: ${MYSQL_DB}
+    volumes: [mysql_data:/var/lib/mysql]
+    networks: [recrusmart-network]
+    restart: unless-stopped
 
   rabbitmq:
     image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - recrusmart-network
+    ports: ["5672:5672", "15672:15672"]
+    volumes: [rabbitmq_data:/var/lib/rabbitmq]
+    networks: [recrusmart-network]
+    restart: unless-stopped
 
+################
+#  NETWORKS & VOLUMES
+################
 networks:
   recrusmart-network:
     driver: bridge

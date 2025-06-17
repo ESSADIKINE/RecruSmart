@@ -7,35 +7,42 @@ server:
 
 spring:
   datasource:
-    url: jdbc:mysql://mysql:3306/recrusmart_candidates
-    username: root
-    password: anass
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DB}
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASS}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
-    hibernate:
-      ddl-auto: update
+    hibernate.ddl-auto: update
     show-sql: true
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
+    properties.hibernate.dialect: org.hibernate.dialect.MySQLDialect
+
   flyway:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
+
   rabbitmq:
     host: rabbitmq
     port: 5672
     username: guest
     password: guest
+  
+  offre:
+    base-url: http://offre-service:8081
 
 cloudflare:
   r2:
-    endpoint: https://6869463e2369d0a64cf20a934c6aa2eb.r2.cloudflarestorage.com  # Remplacer par votre vrai endpoint Cloudflare R2
-    access-key: 85091b1f0894c546dbd9cf486c151f60  # Remplacer par votre vrai Access Key R2
-    secret-key: 7c1ecd80a89f5357362cd8c7690488114d4011d9cf24c7d896ed31f040711469  # Remplacer par votre vrai Secret Key R2
-    bucket:
-      name: recrusmart-cvs  # Nom du bucket créé dans Cloudflare R2
-    public-endpoint: https://pub-15ecea7a863e4583a576e62f10b10177.r2.dev
+    endpoint: ${CF_R2_ENDPOINT}
+    access-key: ${CF_R2_ACCESS_KEY}
+    secret-key: ${CF_R2_SECRET_KEY}
+    bucket.name: ${CF_R2_BUCKET}
+    public-endpoint: ${CF_R2_PUBLIC_ENDPOINT}
 
 jwt:
-  secret: recrusmart_secret_key_2024_secure_jwt_token
+  secret: ${JWT_SECRET}
+
+logging:
+  level:
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG     # enlève si trop verbeux

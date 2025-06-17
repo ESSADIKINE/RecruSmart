@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.http.MediaType;
+import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.List;
@@ -153,11 +154,7 @@ public class CandidateService {
             profil.setGithubUrl("");
             profil.setPortfolioUrl("");
             profil = profilRepository.save(profil);
-        } else if (profil.getEmail() == null) {
-            // Mettre à jour l'email si le profil existe mais n'a pas d'email
-            logger.info("[UPLOAD-CV] Mise à jour de l'email pour le profil existant utilisateurId={}, email={}", idUtilisateur, email);
-            profil.setEmail(email);
-            profil = profilRepository.save(profil);
+            logger.info("[UPLOAD-CV] Profil créé avec succès pour utilisateurId={}", idUtilisateur);
         }
 
         String cheminCv = "cvs/" + idUtilisateur + "/" + UUID.randomUUID() + ".pdf";
@@ -196,9 +193,10 @@ public class CandidateService {
      */
     public void soumettreCandidature(String profilId, String offreId) {
         try {
-            logger.info("[CANDIDATURE] Début synchro service-offre");
+            logger.info("[CANDIDATURE] Début soumission candidature pour profilId={}, offreId={}", profilId, offreId);
             Profile profil = profilRepository.findByUtilisateurId(profilId);
             if (profil == null) {
+                logger.error("[CANDIDATURE] Profil introuvable pour utilisateurId={}", profilId);
                 throw new RuntimeException("Profil introuvable pour l'utilisateur : " + profilId);
             }
 
@@ -206,23 +204,29 @@ public class CandidateService {
             Map<String, Object> newCandidat = new HashMap<>();
             newCandidat.put("utilisateurId", profilId);
             newCandidat.put("cv", profil.getUrlCv());
+            newCandidat.put("email", profil.getEmail());
+            newCandidat.put("competences", profil.getCompetences());
+            newCandidat.put("experiences", profil.getExperiences());
+            newCandidat.put("niveauEtude", profil.getNiveauEtude());
+            newCandidat.put("anneesExperience", profil.getAnneesExperience());
             newCandidat.put("score", null); // Optionnel, sera calculé plus tard
 
-            // Utiliser WebClient pour ajouter le candidat avec authentification
+            // Utiliser WebClient pour ajouter le candidat avec authentification via API Gateway
             WebClient webClient = WebClient.builder()
-                .baseUrl("http://localhost:5001")
+                .baseUrl("http://api-gateway")  // Utiliser l'API Gateway
                 .defaultHeader("Authorization", "Bearer " + generateServiceToken())
                 .build();
 
+            logger.info("[CANDIDATURE] Envoi de la requête au service offre via API Gateway");
             String response = webClient.post()
-                .uri("/offres/" + offreId + "/candidats")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(newCandidat)
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
+                    .uri("/api/offres/{id}/candidats/", offreId)   // <-- slash final conservé
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(newCandidat)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
             
-            logger.info("[CANDIDATURE] Réponse POST service-offre: " + response);
+            logger.info("[CANDIDATURE] Réponse du service offre: {}", response);
 
             // Publier l'événement Candidature soumise
             Map<String, Object> evenement = new HashMap<>();
@@ -237,7 +241,7 @@ public class CandidateService {
                 logger.error("[CANDIDATURE] Erreur de sérialisation JSON pour RabbitMQ", e);
             }
         } catch (Exception e) {
-            logger.error("[CANDIDATURE] Erreur lors de la synchro avec service-offre: " + e.getMessage(), e);
+            logger.error("[CANDIDATURE] Erreur lors de la soumission de la candidature: {}", e.getMessage(), e);
             throw new RuntimeException("Erreur lors de la soumission de la candidature: " + e.getMessage());
         }
     }
@@ -369,5 +373,9 @@ public class CandidateService {
         } catch (Exception e) {
             throw new RuntimeException("Erreur lors de la mise à jour du profil: " + e.getMessage(), e);
         }
+    }
+
+    public Profile saveProfile(Profile profile) {
+        return profilRepository.save(profile);
     }
 }

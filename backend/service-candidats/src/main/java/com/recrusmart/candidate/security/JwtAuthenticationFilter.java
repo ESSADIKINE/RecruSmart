@@ -1,8 +1,7 @@
 package com.recrusmart.candidate.security;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import org.springframework.beans.factory.annotation.Value;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -19,9 +18,6 @@ import java.util.Collections;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Value("${jwt.secret}")
-    private String jwtSecret;
-
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -29,20 +25,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
             try {
-                Claims claims = Jwts.parser()
-                        .setSigningKey(jwtSecret.getBytes())
-                        .parseClaimsJws(token)
-                        .getBody();
+                DecodedJWT jwt = JWT.decode(token);
+                String id = jwt.getClaim("id").asString();
+                String email = jwt.getClaim("email").asString();
+                String role = jwt.getClaim("role").asString();
 
-                String username = claims.getSubject();
-                if (username != null) {
+                if (id != null && email != null) {
                     UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                            username, null, Collections.emptyList());
+                            email, null, Collections.emptyList());
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             } catch (Exception e) {
-                // Token invalide, ne rien faire (403)
+                logger.error("Error processing JWT token", e);
             }
         }
         filterChain.doFilter(request, response);

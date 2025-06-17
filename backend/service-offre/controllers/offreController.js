@@ -68,26 +68,91 @@ exports.deleteOffre = async (req, res, next) => {
 
 // New endpoints for managing candidates
 exports.addCandidatToOffre = async (req, res) => {
+  console.log("=== DÉBUT DE LA REQUÊTE addCandidatToOffre ===");
+  console.log("Méthode:", req.method);
+  console.log("URL:", req.originalUrl);
+  console.log("Headers:", JSON.stringify(req.headers, null, 2));
+  console.log("Body:", JSON.stringify(req.body, null, 2));
+  console.log("Params:", JSON.stringify(req.params, null, 2));
+
   try {
     const { offreId } = req.params;
-    const { utilisateurId, cv, score } = req.body;
+    console.log("OffreId reçu:", offreId);
+    
+    const { 
+      utilisateurId,
+      cv, 
+      email,
+      competences,
+      experiences,
+      niveauEtude,
+      anneesExperience,
+      langues,
+      educations,
+      domaines,
+      score 
+    } = req.body;
+
+    if (!utilisateurId) {
+      console.log("ID utilisateur manquant dans le body");
+      return res.status(400).json({ message: "ID utilisateur manquant" });
+    }
+
+    console.log("Données reçues:", req.body);
 
     // Check if offer exists
     const offre = await Offre.findById(offreId);
     if (!offre) {
+      console.log("Offre non trouvée:", offreId);
       return res.status(404).json({ message: "Offre non trouvée" });
     }
 
-    // Create or update candidate
+    console.log("Tentative de création/mise à jour du candidat avec:", {
+      offreId,
+      utilisateurId,
+      email,
+      cv
+    });
+
+    // Create or update candidate with all fields
     const candidat = await CandidatOffre.findOneAndUpdate(
-      { offreId, utilisateurId },
-      { cv, score, updatedAt: new Date() },
-      { upsert: true, new: true }
+      { 
+        offreId: offreId,
+        utilisateurId: utilisateurId 
+      },
+      { 
+        $set: {
+          cv,
+          email,
+          competences,
+          experiences,
+          niveauEtude,
+          anneesExperience,
+          langues,
+          educations,
+          domaines,
+          score,
+          updatedAt: new Date() 
+        }
+      },
+      { 
+        upsert: true, 
+        new: true,
+        setDefaultsOnInsert: true
+      }
     );
 
+    console.log("Candidat créé/mis à jour avec succès:", candidat);
     res.status(201).json(candidat);
   } catch (error) {
-    res.status(500).json({ message: "Erreur lors de l'ajout du candidat", error });
+    console.error("Erreur détaillée lors de l'ajout du candidat:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    res.status(500).json({ message: "Erreur lors de l'ajout du candidat", error: error.message });
+  } finally {
+    console.log("=== FIN DE LA REQUÊTE addCandidatToOffre ===");
   }
 };
 
@@ -99,26 +164,5 @@ exports.getCandidatsForOffre = async (req, res) => {
     res.json(candidats);
   } catch (error) {
     res.status(500).json({ message: "Erreur lors de la récupération des candidats", error });
-  }
-};
-
-exports.updateCandidatScore = async (req, res) => {
-  try {
-    const { offreId, utilisateurId } = req.params;
-    const { score } = req.body;
-
-    const candidat = await CandidatOffre.findOneAndUpdate(
-      { offreId, utilisateurId },
-      { score, updatedAt: new Date() },
-      { new: true }
-    );
-
-    if (!candidat) {
-      return res.status(404).json({ message: "Candidat non trouvé" });
-    }
-
-    res.json(candidat);
-  } catch (error) {
-    res.status(500).json({ message: "Erreur lors de la mise à jour du score", error });
   }
 };

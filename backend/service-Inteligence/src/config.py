@@ -1,10 +1,12 @@
 import os
 
-# RabbitMQ Configuration
-RABBITMQ_HOST = os.getenv("RABBITMQ_HOST", "localhost")
-RABBITMQ_EXCHANGE = os.getenv("RABBITMQ_EXCHANGE", "recrusmart.events")
+# RabbitMQ
+RABBITMQ_HOST        = os.getenv("RABBITMQ_HOST", "rabbitmq")
+RABBITMQ_EXCHANGE    = os.getenv("RABBITMQ_EXCHANGE", "recrusmart.events")
 RABBITMQ_ROUTING_KEY = os.getenv("RABBITMQ_ROUTING_KEY", "Candidat.CV.Recu")
 
-# Service URLs
-OFFRE_SERVICE_URL = os.getenv("OFFRE_SERVICE_URL", "http://localhost:5001")
-CANDIDATS_POPULATE_CV_URL = os.getenv("CANDIDATS_POPULATE_CV_URL", "http://candidat-service:8084/api/candidats/remplir-cv")
+# *** TOUS les appels HTTP passent par le Gateway ***
+API_GATEWAY          = os.getenv("API_GATEWAY_HOST", "http://api-gateway")   # même réseau docker
+
+OFFRE_SERVICE_URL         = f"{API_GATEWAY}/api/offres"          # ex : POST {OFFRE_SERVICE_URL}/{id}/candidats
+CANDIDATS_POPULATE_CV_URL = f"{API_GATEWAY}/api/candidats/remplir-cv"
