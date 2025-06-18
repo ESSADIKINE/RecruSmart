@@ -155,6 +155,7 @@ exports.getCandidatsForOffre = async (req, res) => {
 exports.triggerScoring = async (req, res) => {
     try {
         const { id } = req.params;
+        const top = parseInt(req.query.top) || 5; // Par défaut top 5 si non spécifié
         
         // Vérifier si l'offre existe
         const offre = await Offre.findById(id);
@@ -171,6 +172,7 @@ exports.triggerScoring = async (req, res) => {
         // Publier l'événement de scoring avec toutes les données
         await publishOffreEvent('Recruitment.Scoring.Demande', {
             offreId: id,
+            top: top,
             token: req.headers.authorization,
             offre: offre.toObject(),
             candidats: candidatOffre.candidats
@@ -178,7 +180,8 @@ exports.triggerScoring = async (req, res) => {
 
         res.json({ 
             message: "Demande de scoring envoyée avec succès",
-            offreId: id
+            offreId: id,
+            top: top
         });
     } catch (error) {
         console.error("Erreur lors de l'envoi de la demande de scoring:", error);

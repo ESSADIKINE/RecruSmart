@@ -12,6 +12,9 @@ services:
       - candidat-service
       - offre-service
       - intelligence-service
+      - notification-service
+      - entretiens-service
+
     networks: [recrusmart-network]
     restart: unless-stopped
 
@@ -46,6 +49,28 @@ services:
     ports: ["8082:8082"]
     env_file: .env
     depends_on: [rabbitmq, candidat-service]
+    networks: [recrusmart-network]
+    restart: unless-stopped
+
+  notification-service:
+    build: ./service-notifications
+    ports: ["8083:5000"]
+    env_file: .env
+    environment:
+      RABBITMQ_URL: amqp://rabbitmq
+    depends_on: [rabbitmq]
+    networks: [recrusmart-network]
+    restart: unless-stopped
+
+  entretiens-service:
+    build: ./service-entretiens
+    ports: ["8085:4000"]
+    env_file: .env
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/recrusmart_entretiens
+      RABBITMQ_URL: amqp://rabbitmq
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on: [mongodb, rabbitmq]
     networks: [recrusmart-network]
     restart: unless-stopped
 

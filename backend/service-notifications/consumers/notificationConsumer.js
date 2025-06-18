@@ -1,5 +1,6 @@
 const { connectRabbit } = require('../config/rabbitmq');
 const { sendEmail } = require('../utils/emailSender');
+const { getUserById, getOffreById } = require('../utils/apiGatewayClient');
 
 const EVENT_MAP = {
   'Auth.PasswordReset.Requested': {
@@ -25,6 +26,10 @@ const EVENT_MAP = {
   'Recruitment.Candidat.Accepté': {
     template: 'acceptation.html',
     subject: 'Votre candidature a été acceptée'
+  },
+  'Recruitment.Notification.TopCandidates': {
+    template: 'topCandidates.html',
+    subject: 'Félicitations ! Vous êtes parmi les meilleurs candidats'
   }
 };
 
@@ -35,14 +40,64 @@ async function startConsumer() {
     try {
       const event = JSON.parse(msg.content.toString());
       const conf = EVENT_MAP[event.type];
-      if (conf && event.data && event.data.email) {
-        await sendEmail({
-          to: event.data.email,
-          subject: conf.subject,
-          templateName: conf.template,
-          variables: event.data
-        });
-        console.log('Email envoyé pour', event.type, 'à', event.data.email);
+      
+      if (conf) {
+        // Cas spécial pour les candidats sélectionnés
+        if (event.type === 'Recruitment.Notification.TopCandidates' && event.data && event.data.candidats) {
+          for (let i = 0; i < event.data.candidats.length; i++) {
+            const candidat = event.data.candidats[i];
+            // Enrichir avec infos utilisateur et offre
+            let prenom = candidat.prenom;
+            try {
+              const user = await getUserById(candidat.utilisateurId, event.data.token);
+              prenom = user.name || user.prenom || prenom;
+            } catch (e) { /* fallback */ }
+            let titreOffre = event.data.titreOffre;
+            try {
+              const offre = await getOffreById(event.data.offreId, event.data.token);
+              titreOffre = offre.titre || titreOffre;
+            } catch (e) { /* fallback */ }
+            const variables = {
+              ...event.data,
+              email: candidat.email,
+              prenom,
+              score: candidat.score,
+              position: i + 1,
+              titreOffre
+            };
+            await sendEmail({
+              to: candidat.email,
+              subject: conf.subject,
+              templateName: conf.template,
+              variables: variables
+            });
+            console.log('Email envoyé pour', event.type, 'à', candidat.email, 'position', i + 1);
+          }
+        } else if (event.type === 'Recruitment.Candidat.Accepté' && event.data && event.data.utilisateurId) {
+          // Enrichir avec infos utilisateur
+          let prenom = event.data.prenom;
+          try {
+            const user = await getUserById(event.data.utilisateurId, event.data.token);
+            prenom = user.name || user.prenom || prenom;
+          } catch (e) { /* fallback */ }
+          const variables = { ...event.data, prenom };
+          await sendEmail({
+            to: event.data.email,
+            subject: conf.subject,
+            templateName: conf.template,
+            variables
+          });
+          console.log('Email envoyé pour', event.type, 'à', event.data.email);
+        } else if (event.data && event.data.email) {
+          // Cas standard pour un seul email
+          await sendEmail({
+            to: event.data.email,
+            subject: conf.subject,
+            templateName: conf.template,
+            variables: event.data
+          });
+          console.log('Email envoyé pour', event.type, 'à', event.data.email);
+        }
       }
       channel.ack(msg);
     } catch (err) {

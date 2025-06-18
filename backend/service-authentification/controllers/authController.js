@@ -1,10 +1,8 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { AppError } = require('../middlewares/errorHandler');
-
-// Service URLs from environment variables
-const CANDIDATS_SERVICE_URL = process.env.CANDIDATS_SERVICE_URL || 'http://localhost:8084';
-const INTELLIGENCE_SERVICE_URL = process.env.INTELLIGENCE_SERVICE_URL || 'http://localhost:5002';
+const { publishEvent } = require('../config/rabbitmq');
+const crypto = require('crypto');
 
 // Helper function to create JWT token
 const createToken = (user) => {
@@ -51,21 +49,18 @@ exports.register = async (req, res, next) => {
         }
 
         // Create user
-        const user = await User.create({ email, password, name, role });
+        const user = await User.create({
+            email,
+            password,
+            name,
+            role,
+            isActive: false,
+            isEmailVerified: false
+        });
         const token = createToken(user);
 
-        res.status(201).json({
-            success: true,
-            data: {
-                user: {
-                    id: user._id,
-                    email: user.email,
-                    name: user.name,
-                    role: user.role
-                },
-                token
-            }
-        });
+        // Envoi OTP après inscription
+        await exports.sendOTP({ body: { email }, ...req }, res, next);
     } catch (err) {
         next(err);
     }
@@ -74,23 +69,24 @@ exports.register = async (req, res, next) => {
 exports.login = async (req, res, next) => {
     try {
         const { email, password } = req.body;
-
         if (!email || !password) {
             throw new AppError('Email and password are required', 400);
         }
-
         const user = await User.findOne({ email });
-        if (!user || !(await user.comparePassword(password))) {
+        if (!user) {
             throw new AppError('Invalid email or password', 401);
         }
-
-        if (!user.isActiveUser()) {
-            throw new AppError('Account is inactive', 403);
+        if (!user.isEmailVerified) {
+            throw new AppError('Veuillez vérifier votre e-mail', 403);
         }
-
+        if (!user.isActiveUser()) {
+            throw new AppError('Compte désactivé', 403);
+        }
+        if (!(await user.comparePassword(password))) {
+            throw new AppError('Invalid email or password', 401);
+        }
         const token = createToken(user);
         await user.updateLastLogin();
-
         res.json({
             success: true,
             data: {
@@ -232,38 +228,91 @@ exports.updateUser = async (req, res, next) => {
     }
 };
 
-exports.deleteUser = async (req, res, next) => {
+exports.sendOTP = async (req, res, next) => {
     try {
-        const user = await User.findById(req.params.id);
-        if (!user) {
-            throw new AppError('User not found', 404);
-        }
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) throw new AppError('User not found', 404);
 
-        // If user is a candidate, delete profile in candidates service
-        if (user.role === 'CANDIDAT') {
-            try {
-                const token = createToken(user);
-                const response = await fetch(`${CANDIDATS_SERVICE_URL}/api/candidats/profil/${user._id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
+        const otpCode = (Math.floor(100000 + Math.random() * 900000)).toString();
+        user.otpCode = otpCode;
+        user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 min
+        await user.save();
 
-                if (!response.ok) {
-                    console.error('Failed to delete candidate profile:', await response.text());
-                }
-            } catch (error) {
-                console.error('Error deleting candidate profile:', error);
-            }
-        }
-
-        await user.deleteOne();
-
-        res.json({
-            success: true,
-            message: 'User deleted successfully'
+        await publishEvent('Auth.OTP.Sent', {
+            utilisateurId: user._id,
+            email: user.email,
+            code: otpCode,
+            prenom: user.name
         });
+
+        res.json({ success: true, message: 'OTP envoyé' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.verifyOTP = async (req, res, next) => {
+    try {
+        const { email, code } = req.body;
+        const user = await User.findOne({ email });
+        if (!user || user.otpCode !== code || user.otpExpires < Date.now()) {
+            throw new AppError('OTP invalide ou expiré', 400);
+        }
+        user.isEmailVerified = true;
+        user.isActive = true;
+        user.otpCode = undefined;
+        user.otpExpires = undefined;
+        await user.save();
+
+        await publishEvent('Auth.Account.Created', {
+            utilisateurId: user._id,
+            email: user.email,
+            prenom: user.name
+        });
+
+        res.json({ success: true, message: 'Email vérifié' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.forgotPassword = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) throw new AppError('User not found', 404);
+
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1h
+        await user.save();
+
+        await publishEvent('Auth.PasswordReset.Requested', {
+            utilisateurId: user._id,
+            email: user.email,
+            prenom: user.name,
+            resetToken
+        });
+
+        res.json({ success: true, message: 'Email de réinitialisation envoyé' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.resetPassword = async (req, res, next) => {
+    try {
+        const { email, resetToken, newPassword } = req.body;
+        const user = await User.findOne({ email, resetPasswordToken: resetToken, resetPasswordExpires: { $gt: Date.now() } });
+        if (!user) throw new AppError('Token invalide ou expiré', 400);
+
+        user.password = newPassword;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        await user.save();
+
+        res.json({ success: true, message: 'Mot de passe réinitialisé' });
     } catch (err) {
         next(err);
     }
