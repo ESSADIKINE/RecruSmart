@@ -2,3 +2,10 @@
 /target
 *.log
 *.env
+docker-compose.yml
+application.yml
+application.properties
+*/docker-compose.yml
+*/application.yml
+*/application.properties
+

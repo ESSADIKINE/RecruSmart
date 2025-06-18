@@ -1,37 +1,61 @@
 const mongoose = require('mongoose');
 
-const CandidatSchema = new mongoose.Schema({
-    utilisateurId: { type: String, required: true },
-    email: { type: String, required: true },
-    linkedinUrl: { type: String },
-    githubUrl: { type: String },
-    portfolioUrl: { type: String },
-    cv: { type: String, required: true },
-    score: { type: Number },
-    // Informations du profil
-    competences: { type: String }, // JSON stringifié
-    langues: { type: String }, // JSON stringifié
-    anneesExperience: { type: Number },
-    experiences: { type: String }, // JSON stringifié
-    educations: { type: String }, // JSON stringifié
-    domaines: { type: String }, // JSON stringifié
-    niveauEtude: { type: String },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
-});
-
-const CandidatOffreSchema = new mongoose.Schema({
-    offreId: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Offre', 
-        required: true,
-        unique: true // Pour s'assurer qu'il n'y a qu'un seul document par offre
+const candidatSchema = new mongoose.Schema({
+    utilisateurId: {
+        type: String,
+        required: true
     },
-    candidats: [CandidatSchema] // Tableau de candidats pour cette offre
+    cv: {
+        type: String,
+        required: true
+    },
+    email: {
+        type: String,
+    },
+    competences: {
+        type: String
+    },
+    experiences: {
+        type: String
+    },
+    niveauEtude: {
+        type: String
+    },
+    anneesExperience: {
+        type: Number
+    },
+    langues: {
+        type: String
+    },
+    educations: {
+        type: String
+    },
+    domaines: {
+        type: String
+    },
+    score: {
+        type: Number,
+        default: null
+    },
+    dateCandidature: {
+        type: Date,
+        default: Date.now
+    }
 });
 
-// Index pour les recherches rapides
-CandidatOffreSchema.index({ offreId: 1 });
-CandidatOffreSchema.index({ 'candidats.utilisateurId': 1 });
+const candidatOffreSchema = new mongoose.Schema(
+    {
+      offreId: { type: String, unique: true, required: true },
+      candidats: [candidatSchema],
+    },
+    { timestamps: true },
+  );
 
-module.exports = mongoose.model('CandidatOffre', CandidatOffreSchema); 
+  candidatOffreSchema.index(
+    { offreId: 1, 'candidats.utilisateurId': 1 },
+    { unique: true },
+  );
+  
+  module.exports =
+    mongoose.models.CandidatOffre ||
+    mongoose.model('CandidatOffre', candidatOffreSchema);

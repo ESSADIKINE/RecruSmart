@@ -58,7 +58,6 @@ exports.deleteOffre = async (req, res, next) => {
   try {
     const offre = await Offre.findByIdAndDelete(req.params.id);
     if (!offre) return res.status(404).json({ message: 'Offre non trouvée' });
-    // Delete all associated candidates
     await CandidatOffre.deleteMany({ offreId: req.params.id });
     res.json({ message: 'Offre supprimée' });
   } catch (err) {
@@ -66,28 +65,79 @@ exports.deleteOffre = async (req, res, next) => {
   }
 };
 
-// New endpoints for managing candidates
 exports.addCandidatToOffre = async (req, res) => {
   try {
     const { offreId } = req.params;
-    const { utilisateurId, cv, score } = req.body;
+    const { 
+      utilisateurId,
+      cv, 
+      email,
+      competences,
+      experiences,
+      niveauEtude,
+      anneesExperience,
+      langues,
+      educations,
+      domaines,
+      score 
+    } = req.body;
 
-    // Check if offer exists
+    if (!utilisateurId) {
+      return res.status(400).json({ message: "ID utilisateur manquant" });
+    }
+
     const offre = await Offre.findById(offreId);
     if (!offre) {
       return res.status(404).json({ message: "Offre non trouvée" });
     }
 
-    // Create or update candidate
-    const candidat = await CandidatOffre.findOneAndUpdate(
-      { offreId, utilisateurId },
-      { cv, score, updatedAt: new Date() },
-      { upsert: true, new: true }
+    // Vérifier si le candidat a déjà postulé
+    const candidatOffre = await CandidatOffre.findOne({ 
+      offreId,
+      'candidats.utilisateurId': utilisateurId 
+    });
+
+    if (candidatOffre) {
+      return res.status(400).json({ 
+        message: "Vous avez déjà postulé à cette offre" 
+      });
+    }
+
+    // Créer ou mettre à jour le document CandidatOffre
+    const result = await CandidatOffre.findOneAndUpdate(
+      { offreId },
+      { 
+        $push: { 
+          candidats: {
+            utilisateurId,
+            cv,
+            email,
+            competences,
+            experiences,
+            niveauEtude,
+            anneesExperience,
+            langues,
+            educations,
+            domaines,
+            score,
+            dateCandidature: new Date()
+          }
+        }
+      },
+      { 
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true
+      }
     );
 
-    res.status(201).json(candidat);
+    res.status(201).json(result);
   } catch (error) {
-    res.status(500).json({ message: "Erreur lors de l'ajout du candidat", error });
+    console.error("Erreur lors de l'ajout du candidat:", error);
+    res.status(500).json({ 
+      message: "Erreur lors de l'ajout du candidat", 
+      error: error.message 
+    });
   }
 };
 
@@ -102,23 +152,68 @@ exports.getCandidatsForOffre = async (req, res) => {
   }
 };
 
+exports.triggerScoring = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Vérifier si l'offre existe
+        const offre = await Offre.findById(id);
+        if (!offre) {
+            return res.status(404).json({ message: "Offre non trouvée" });
+        }
+
+        // Récupérer les candidats
+        const candidatOffre = await CandidatOffre.findOne({ offreId: id });
+        if (!candidatOffre) {
+            return res.status(404).json({ message: "Aucun candidat trouvé pour cette offre" });
+        }
+
+        // Publier l'événement de scoring avec toutes les données
+        await publishOffreEvent('Recruitment.Scoring.Demande', {
+            offreId: id,
+            token: req.headers.authorization,
+            offre: offre.toObject(),
+            candidats: candidatOffre.candidats
+        });
+
+        res.json({ 
+            message: "Demande de scoring envoyée avec succès",
+            offreId: id
+        });
+    } catch (error) {
+        console.error("Erreur lors de l'envoi de la demande de scoring:", error);
+        res.status(500).json({ 
+            message: "Erreur lors de l'envoi de la demande de scoring",
+            error: error.message 
+        });
+    }
+};
+
 exports.updateCandidatScore = async (req, res) => {
   try {
     const { offreId, utilisateurId } = req.params;
     const { score } = req.body;
 
-    const candidat = await CandidatOffre.findOneAndUpdate(
-      { offreId, utilisateurId },
-      { score, updatedAt: new Date() },
-      { new: true }
+    /* on cible le bon candidat dans le tableau */
+    const result = await CandidatOffre.findOneAndUpdate(
+      { offreId, 'candidats.utilisateurId': utilisateurId },
+      { $set: { 'candidats.$.score': score } },
+      { new: true, runValidators: false },   // pas de validation stricte ici
     );
 
-    if (!candidat) {
-      return res.status(404).json({ message: "Candidat non trouvé" });
-    }
+    if (!result)
+      return res.status(404).json({ message: 'Candidat non trouvé' });
 
-    res.json(candidat);
-  } catch (error) {
-    res.status(500).json({ message: "Erreur lors de la mise à jour du score", error });
+    /* on retourne juste le candidat mis à jour */
+    const candidatMaj = result.candidats.find(
+      (c) => c.utilisateurId === utilisateurId,
+    );
+
+    res.json(candidatMaj);
+  } catch (err) {
+    console.error('updateCandidatScore ->', err.message);
+    res
+      .status(500)
+      .json({ message: 'Erreur lors de la mise à jour du score', error: err.message });
   }
 };

@@ -7,7 +7,7 @@ Extracts structured information from CV PDFs including:
 """
 
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Union, Optional
 import re
 import json
 import unicodedata
@@ -135,7 +135,7 @@ def _heading_split(lines: List[str]) -> Dict[str, List[str]]:
         sec.setdefault(cur, []).append(l)
     return sec
 
-def _keyword(text: str, mapping: Dict[str, List[str]]) -> str | None:
+def _keyword(text: str, mapping: Dict[str, List[str]]) -> Optional[str]:
     """Find matching keyword in text"""
     low = _strip(text.lower())
     for k, vals in mapping.items():
@@ -162,7 +162,7 @@ def _duration(text: str) -> str:
         return f"{months} mois" if months > 0 else DEFAULTS['duree']
     return DEFAULTS['duree']
 
-def parse_cv(src: str | Path) -> Dict[str, Any]:
+def parse_cv(src: Union[str, Path]) -> Dict[str, Any]:
     """Parse CV and extract structured information"""
     if isinstance(src, (str, Path)) and str(src).startswith("http"):
         src = download_pdf(str(src))
