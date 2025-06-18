@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 
+require('./consumers/notificationConsumer');
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });

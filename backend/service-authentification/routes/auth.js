@@ -22,6 +22,5 @@ router.put('/me', authMiddleware, authController.updateMe);
 router.get('/users', authMiddleware, isAdmin, authController.getAllUsers);
 router.get('/users/:id', authMiddleware, isAdmin, authController.getUserById);
 router.put('/users/:id', authMiddleware, isAdmin, authController.updateUser);
-module.exports = router; 
 router.put('/users/:id/ban', authMiddleware, isAdmin, authController.toggleBanUser);
 module.exports = router;
