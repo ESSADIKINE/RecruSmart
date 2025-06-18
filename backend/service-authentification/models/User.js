@@ -30,6 +30,7 @@ const UserSchema = new mongoose.Schema({
   lastLogin: {
     type: Date
   },
+  refreshTokens: [{ type: String }],
   otpCode: { type: String },
   otpExpires: { type: Date },
   isEmailVerified: { type: Boolean, default: false },

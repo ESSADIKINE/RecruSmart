@@ -4,18 +4,17 @@ const { AppError } = require('../middlewares/errorHandler');
 const { publishEvent } = require('../config/rabbitmq');
 const crypto = require('crypto');
 
-// Helper function to create JWT token
-const createToken = (user) => {
-    return jwt.sign(
-        {
-            id: user._id,
-            email: user.email,
-            role: user.role
-        },
+const createAccessToken = (user) =>
+    jwt.sign(
+        { id: user._id, email: user.email, role: user.role },
         process.env.JWT_SECRET,
-        { expiresIn: '24h' }
+        { expiresIn: '15m' }
     );
-};
+
+const createRefreshToken = (user) =>
+    jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, {
+        expiresIn: '7d'
+    });
 
 // Helper function to validate user data
 const validateUserData = (data) => {
@@ -57,10 +56,9 @@ exports.register = async (req, res, next) => {
             isActive: false,
             isEmailVerified: false
         });
-        const token = createToken(user);
-
         // Envoi OTP après inscription
         await exports.sendOTP({ body: { email }, ...req }, res, next);
+        return;
     } catch (err) {
         next(err);
     }
@@ -85,8 +83,11 @@ exports.login = async (req, res, next) => {
         if (!(await user.comparePassword(password))) {
             throw new AppError('Invalid email or password', 401);
         }
-        const token = createToken(user);
+        const accessToken = createAccessToken(user);
+        const refreshToken = createRefreshToken(user);
+        user.refreshTokens.push(refreshToken);
         await user.updateLastLogin();
+        await user.save();
         res.json({
             success: true,
             data: {
@@ -96,7 +97,8 @@ exports.login = async (req, res, next) => {
                     name: user.name,
                     role: user.role
                 },
-                token
+                accessToken,
+                refreshToken
             }
         });
     } catch (err) {
@@ -316,4 +318,62 @@ exports.resetPassword = async (req, res, next) => {
     } catch (err) {
         next(err);
     }
-}; 
+};
+
+exports.refreshToken = async (req, res, next) => {
+    try {
+        const { refreshToken } = req.body;
+        if (!refreshToken) throw new AppError('Refresh token required', 400);
+
+        const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+        const user = await User.findById(payload.id);
+        if (!user || !user.refreshTokens.includes(refreshToken)) {
+            throw new AppError('Invalid refresh token', 401);
+        }
+
+        user.refreshTokens = user.refreshTokens.filter(t => t !== refreshToken);
+        const newRefreshToken = createRefreshToken(user);
+        user.refreshTokens.push(newRefreshToken);
+        await user.save();
+
+        const accessToken = createAccessToken(user);
+        res.json({ success: true, data: { accessToken, refreshToken: newRefreshToken } });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.logout = async (req, res, next) => {
+    try {
+        const { refreshToken } = req.body;
+        if (!refreshToken) throw new AppError('Refresh token required', 400);
+        let userId;
+        try {
+            const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+            userId = payload.id;
+        } catch (e) {
+            return res.json({ success: true, message: 'Logged out' });
+        }
+        const user = await User.findById(userId);
+        if (user) {
+            user.refreshTokens = user.refreshTokens.filter(t => t !== refreshToken);
+            await user.save();
+        }
+        res.json({ success: true, message: 'Logged out' });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.toggleBanUser = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) throw new AppError('User not found', 404);
+        user.isActive = !user.isActive;
+        user.refreshTokens = [];
+        await user.save();
+        res.json({ success: true, data: { isActive: user.isActive } });
+    } catch (err) {
+        next(err);
+    }
+};
