@@ -1,59 +1,61 @@
 const mongoose = require('mongoose');
 
-const CandidatOffreSchema = new mongoose.Schema({
-    offreId: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Offre', 
+const candidatSchema = new mongoose.Schema({
+    utilisateurId: {
+        type: String,
         required: true
     },
-    utilisateurId: { 
-        type: String, 
-        required: true 
+    cv: {
+        type: String,
+        required: true
     },
-    email: { 
-        type: String, 
-        required: true 
+    email: {
+        type: String,
     },
-    cv: { 
-        type: String, 
-        required: true 
+    competences: {
+        type: String
     },
-    score: { 
+    experiences: {
+        type: String
+    },
+    niveauEtude: {
+        type: String
+    },
+    anneesExperience: {
+        type: Number
+    },
+    langues: {
+        type: String
+    },
+    educations: {
+        type: String
+    },
+    domaines: {
+        type: String
+    },
+    score: {
         type: Number,
         default: null
     },
-    competences: { 
-        type: String 
-    },
-    experiences: { 
-        type: String 
-    },
-    niveauEtude: { 
-        type: String 
-    },
-    anneesExperience: { 
-        type: Number 
-    },
-    langues: { 
-        type: String 
-    },
-    educations: { 
-        type: String 
-    },
-    domaines: { 
-        type: String 
-    },
-    createdAt: { 
-        type: Date, 
-        default: Date.now 
-    },
-    updatedAt: { 
-        type: Date, 
-        default: Date.now 
+    dateCandidature: {
+        type: Date,
+        default: Date.now
     }
 });
 
-// Index composé pour s'assurer qu'un candidat ne peut postuler qu'une seule fois à une offre
-CandidatOffreSchema.index({ offreId: 1, utilisateurId: 1 }, { unique: true });
+const candidatOffreSchema = new mongoose.Schema(
+    {
+      offreId: { type: String, unique: true, required: true },
+      candidats: [candidatSchema],
+    },
+    { timestamps: true },
+  );
 
-module.exports = mongoose.model('CandidatOffre', CandidatOffreSchema); 
+  candidatOffreSchema.index(
+    { offreId: 1, 'candidats.utilisateurId': 1 },
+    { unique: true },
+  );
+  
+  module.exports =
+    mongoose.models.CandidatOffre ||
+    mongoose.model('CandidatOffre', candidatOffreSchema);

@@ -58,7 +58,6 @@ exports.deleteOffre = async (req, res, next) => {
   try {
     const offre = await Offre.findByIdAndDelete(req.params.id);
     if (!offre) return res.status(404).json({ message: 'Offre non trouvée' });
-    // Delete all associated candidates
     await CandidatOffre.deleteMany({ offreId: req.params.id });
     res.json({ message: 'Offre supprimée' });
   } catch (err) {
@@ -66,19 +65,9 @@ exports.deleteOffre = async (req, res, next) => {
   }
 };
 
-// New endpoints for managing candidates
 exports.addCandidatToOffre = async (req, res) => {
-  console.log("=== DÉBUT DE LA REQUÊTE addCandidatToOffre ===");
-  console.log("Méthode:", req.method);
-  console.log("URL:", req.originalUrl);
-  console.log("Headers:", JSON.stringify(req.headers, null, 2));
-  console.log("Body:", JSON.stringify(req.body, null, 2));
-  console.log("Params:", JSON.stringify(req.params, null, 2));
-
   try {
     const { offreId } = req.params;
-    console.log("OffreId reçu:", offreId);
-    
     const { 
       utilisateurId,
       cv, 
@@ -94,65 +83,61 @@ exports.addCandidatToOffre = async (req, res) => {
     } = req.body;
 
     if (!utilisateurId) {
-      console.log("ID utilisateur manquant dans le body");
       return res.status(400).json({ message: "ID utilisateur manquant" });
     }
 
-    console.log("Données reçues:", req.body);
-
-    // Check if offer exists
     const offre = await Offre.findById(offreId);
     if (!offre) {
-      console.log("Offre non trouvée:", offreId);
       return res.status(404).json({ message: "Offre non trouvée" });
     }
 
-    console.log("Tentative de création/mise à jour du candidat avec:", {
+    // Vérifier si le candidat a déjà postulé
+    const candidatOffre = await CandidatOffre.findOne({ 
       offreId,
-      utilisateurId,
-      email,
-      cv
+      'candidats.utilisateurId': utilisateurId 
     });
 
-    // Create or update candidate with all fields
-    const candidat = await CandidatOffre.findOneAndUpdate(
+    if (candidatOffre) {
+      return res.status(400).json({ 
+        message: "Vous avez déjà postulé à cette offre" 
+      });
+    }
+
+    // Créer ou mettre à jour le document CandidatOffre
+    const result = await CandidatOffre.findOneAndUpdate(
+      { offreId },
       { 
-        offreId: offreId,
-        utilisateurId: utilisateurId 
-      },
-      { 
-        $set: {
-          cv,
-          email,
-          competences,
-          experiences,
-          niveauEtude,
-          anneesExperience,
-          langues,
-          educations,
-          domaines,
-          score,
-          updatedAt: new Date() 
+        $push: { 
+          candidats: {
+            utilisateurId,
+            cv,
+            email,
+            competences,
+            experiences,
+            niveauEtude,
+            anneesExperience,
+            langues,
+            educations,
+            domaines,
+            score,
+            dateCandidature: new Date()
+          }
         }
       },
       { 
-        upsert: true, 
+        upsert: true,
         new: true,
         setDefaultsOnInsert: true
       }
     );
 
-    console.log("Candidat créé/mis à jour avec succès:", candidat);
-    res.status(201).json(candidat);
+    res.status(201).json(result);
   } catch (error) {
-    console.error("Erreur détaillée lors de l'ajout du candidat:", {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
+    console.error("Erreur lors de l'ajout du candidat:", error);
+    res.status(500).json({ 
+      message: "Erreur lors de l'ajout du candidat", 
+      error: error.message 
     });
-    res.status(500).json({ message: "Erreur lors de l'ajout du candidat", error: error.message });
-  } finally {
-    console.log("=== FIN DE LA REQUÊTE addCandidatToOffre ===");
   }
 };
 
@@ -164,5 +149,71 @@ exports.getCandidatsForOffre = async (req, res) => {
     res.json(candidats);
   } catch (error) {
     res.status(500).json({ message: "Erreur lors de la récupération des candidats", error });
+  }
+};
+
+exports.triggerScoring = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Vérifier si l'offre existe
+        const offre = await Offre.findById(id);
+        if (!offre) {
+            return res.status(404).json({ message: "Offre non trouvée" });
+        }
+
+        // Récupérer les candidats
+        const candidatOffre = await CandidatOffre.findOne({ offreId: id });
+        if (!candidatOffre) {
+            return res.status(404).json({ message: "Aucun candidat trouvé pour cette offre" });
+        }
+
+        // Publier l'événement de scoring avec toutes les données
+        await publishOffreEvent('Recruitment.Scoring.Demande', {
+            offreId: id,
+            token: req.headers.authorization,
+            offre: offre.toObject(),
+            candidats: candidatOffre.candidats
+        });
+
+        res.json({ 
+            message: "Demande de scoring envoyée avec succès",
+            offreId: id
+        });
+    } catch (error) {
+        console.error("Erreur lors de l'envoi de la demande de scoring:", error);
+        res.status(500).json({ 
+            message: "Erreur lors de l'envoi de la demande de scoring",
+            error: error.message 
+        });
+    }
+};
+
+exports.updateCandidatScore = async (req, res) => {
+  try {
+    const { offreId, utilisateurId } = req.params;
+    const { score } = req.body;
+
+    /* on cible le bon candidat dans le tableau */
+    const result = await CandidatOffre.findOneAndUpdate(
+      { offreId, 'candidats.utilisateurId': utilisateurId },
+      { $set: { 'candidats.$.score': score } },
+      { new: true, runValidators: false },   // pas de validation stricte ici
+    );
+
+    if (!result)
+      return res.status(404).json({ message: 'Candidat non trouvé' });
+
+    /* on retourne juste le candidat mis à jour */
+    const candidatMaj = result.candidats.find(
+      (c) => c.utilisateurId === utilisateurId,
+    );
+
+    res.json(candidatMaj);
+  } catch (err) {
+    console.error('updateCandidatScore ->', err.message);
+    res
+      .status(500)
+      .json({ message: 'Erreur lors de la mise à jour du score', error: err.message });
   }
 };

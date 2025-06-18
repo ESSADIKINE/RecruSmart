@@ -2,7 +2,7 @@ import asyncio
 import logging
 from fastapi import FastAPI, BackgroundTasks, Header, HTTPException
 from aio_pika import connect_robust, ExchangeType
-from .offer_consumer import process_scoring_request
+from .offer_consumer import process_scoring_message, start_consumer
 from .pdf_extractor import parse_cv
 from .config import (
     RABBITMQ_HOST, 
@@ -160,22 +160,19 @@ async def process_cv_message(message):
     except Exception as e:
         logger.error(f"Erreur lors du traitement du message: {str(e)}")
 
-async def process_scoring_message(message):
-    """Traite les messages de scoring reçus"""
-    try:
-        data = json.loads(message.body.decode())
-        offre_id = data.get("offreId")
-        token = data.get("token")
-        if offre_id and token:
-            await process_scoring_request(offre_id, token)
-    except Exception as e:
-        logger.error(f"Erreur lors du traitement du message de scoring: {str(e)}")
-
 @app.on_event("startup")
 async def startup_event():
     """Événement de démarrage de l'application"""
     try:
+        # Configurer RabbitMQ
         await rabbitmq.connect()
+        
+        # Démarrer le consumer RabbitMQ dans un thread séparé
+        import threading
+        consumer_thread = threading.Thread(target=start_consumer)
+        consumer_thread.daemon = True
+        consumer_thread.start()
+        
     except Exception as e:
         logger.error(f"Erreur lors du démarrage: {str(e)}")
         raise
@@ -199,5 +196,8 @@ async def score_offre(offre_id: str, background_tasks: BackgroundTasks, authoriz
         raise HTTPException(status_code=503, detail="Service non connecté à RabbitMQ")
     
     token = authorization.replace("Bearer ", "")
-    background_tasks.add_task(process_scoring_request, offre_id, token)
+    background_tasks.add_task(process_scoring_message, {
+        "offreId": offre_id,
+        "token": token
+    })
     return {"message": "Scoring démarré en arrière-plan"} 

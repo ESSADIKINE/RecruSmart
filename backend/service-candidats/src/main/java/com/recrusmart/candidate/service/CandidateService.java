@@ -28,6 +28,8 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import java.util.Date;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 @Service
 public class CandidateService {
@@ -191,27 +193,26 @@ public class CandidateService {
     /**
      * Soumet une candidature pour un profil donné.
      */
-    public void soumettreCandidature(String profilId, String offreId) {
+    public void soumettreCandidature(String utilisateurId, String offreId) {
+        Profile profile = getProfilByUtilisateurId(utilisateurId);
+        if (profile == null) {
+            throw new RuntimeException("Profil non trouvé");
+        }
+
+        Map<String, Object> candidatureData = new HashMap<>();
+        candidatureData.put("utilisateurId", utilisateurId);
+        candidatureData.put("cv", profile.getUrlCv());
+        candidatureData.put("email", profile.getEmail());
+        candidatureData.put("competences", profile.getCompetences());
+        candidatureData.put("experiences", profile.getExperiences());
+        candidatureData.put("niveauEtude", profile.getNiveauEtude());
+        candidatureData.put("anneesExperience", profile.getAnneesExperience());
+        candidatureData.put("langues", profile.getLangues());
+        candidatureData.put("educations", profile.getEducations());
+        candidatureData.put("domaines", profile.getDomaines());
+        candidatureData.put("score", null); // Le score sera calculé par le service d'intelligence
+
         try {
-            logger.info("[CANDIDATURE] Début soumission candidature pour profilId={}, offreId={}", profilId, offreId);
-            Profile profil = profilRepository.findByUtilisateurId(profilId);
-            if (profil == null) {
-                logger.error("[CANDIDATURE] Profil introuvable pour utilisateurId={}", profilId);
-                throw new RuntimeException("Profil introuvable pour l'utilisateur : " + profilId);
-            }
-
-            // Créer le candidat à ajouter
-            Map<String, Object> newCandidat = new HashMap<>();
-            newCandidat.put("utilisateurId", profilId);
-            newCandidat.put("cv", profil.getUrlCv());
-            newCandidat.put("email", profil.getEmail());
-            newCandidat.put("competences", profil.getCompetences());
-            newCandidat.put("experiences", profil.getExperiences());
-            newCandidat.put("niveauEtude", profil.getNiveauEtude());
-            newCandidat.put("anneesExperience", profil.getAnneesExperience());
-            newCandidat.put("score", null); // Optionnel, sera calculé plus tard
-
-            // Utiliser WebClient pour ajouter le candidat avec authentification via API Gateway
             WebClient webClient = WebClient.builder()
                 .baseUrl("http://api-gateway")  // Utiliser l'API Gateway
                 .defaultHeader("Authorization", "Bearer " + generateServiceToken())
@@ -219,9 +220,9 @@ public class CandidateService {
 
             logger.info("[CANDIDATURE] Envoi de la requête au service offre via API Gateway");
             String response = webClient.post()
-                    .uri("/api/offres/{id}/candidats/", offreId)   // <-- slash final conservé
+                    .uri("/api/offres/" + offreId + "/candidats")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(newCandidat)
+                    .bodyValue(candidatureData)
                     .retrieve()
                     .bodyToMono(String.class)
                     .block();
@@ -230,7 +231,7 @@ public class CandidateService {
 
             // Publier l'événement Candidature soumise
             Map<String, Object> evenement = new HashMap<>();
-            evenement.put("profilId", profilId);
+            evenement.put("profilId", utilisateurId);
             evenement.put("offreId", offreId);
             evenement.put("timestamp", java.time.Instant.now().toString());
             try {
@@ -240,8 +241,12 @@ public class CandidateService {
             } catch (Exception e) {
                 logger.error("[CANDIDATURE] Erreur de sérialisation JSON pour RabbitMQ", e);
             }
+        } catch (WebClientResponseException e) {
+            if (e.getStatusCode() == HttpStatus.BAD_REQUEST) {
+                throw new RuntimeException("Vous avez déjà postulé à cette offre");
+            }
+            throw new RuntimeException("Erreur lors de la soumission de la candidature: " + e.getMessage());
         } catch (Exception e) {
-            logger.error("[CANDIDATURE] Erreur lors de la soumission de la candidature: {}", e.getMessage(), e);
             throw new RuntimeException("Erreur lors de la soumission de la candidature: " + e.getMessage());
         }
     }

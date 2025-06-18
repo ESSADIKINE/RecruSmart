@@ -2,7 +2,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const offreRoutes = require('./routes/offreRoutes');
-const candidatOffreRoutes = require('./routes/candidatOffreRoutes');
 const { authenticateToken } = require('./middleware/auth');
 
 const app = express();
@@ -13,7 +12,6 @@ app.use(express.json());
 
 // Routes
 app.use('/offres', offreRoutes);
-app.use('/candidatures', candidatOffreRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

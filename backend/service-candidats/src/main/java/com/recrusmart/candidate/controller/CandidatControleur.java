@@ -64,6 +64,7 @@ public class CandidatControleur {
         return ResponseEntity.ok().build();
     }
 
+
     @PutMapping(value = "/cv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateCv(@RequestHeader("Authorization") String h,
                                       @RequestPart("fichier") MultipartFile f) {
