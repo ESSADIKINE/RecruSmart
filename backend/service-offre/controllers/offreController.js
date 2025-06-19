@@ -35,6 +35,73 @@ exports.getAllOffres = async (req, res, next) => {
   }
 };
 
+// ADMIN: récupérer toutes les offres
+exports.getAllOffresAdmin = async (req, res, next) => {
+  try {
+    const offres = await Offre.find();
+    res.json(offres);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// RECRUTEUR: récupérer ses propres offres
+exports.getMesOffres = async (req, res, next) => {
+  try {
+    const offres = await Offre.find({ recruteurId: req.user.id });
+    res.json(offres);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Recherche avancée d'offres
+exports.searchOffres = async (req, res, next) => {
+  try {
+    const { type, q, duree } = req.query;
+    const filter = { statut: 'OPEN' };
+    if (type) {
+      filter.type = type;
+    }
+    if (q) {
+      const regex = new RegExp(q, 'i');
+      filter.$or = [
+        { titre: regex },
+        { description: regex },
+        { domaine: regex },
+      ];
+    }
+    if (duree) {
+      const now = new Date();
+      let pastDate;
+      switch (duree) {
+        case '-24h':
+          pastDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case 'yesterday':
+          pastDate = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+          break;
+        case 'last3days':
+          pastDate = new Date(now.getTime() - 72 * 60 * 60 * 1000);
+          break;
+        case 'last7days':
+          pastDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'months':
+          pastDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+      }
+      if (pastDate) {
+        filter.updatedAt = { $gte: pastDate };
+      }
+    }
+    const offres = await Offre.find(filter).sort({ updatedAt: -1 });
+    res.json(offres);
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getOffreById = async (req, res, next) => {
   try {
     const offre = await Offre.findById(req.params.id);
@@ -62,6 +129,22 @@ exports.deleteOffre = async (req, res, next) => {
     if (!offre) return res.status(404).json({ message: 'Offre non trouvée' });
     await CandidatOffre.deleteMany({ offreId: req.params.id });
     res.json({ message: 'Offre supprimée' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// RECRUTEUR : récupérer les candidats pour l'une de ses offres
+exports.getCandidatsRecruteur = async (req, res, next) => {
+  try {
+    const { offreId } = req.params;
+    const offre = await Offre.findById(offreId);
+    if (!offre) return res.status(404).json({ message: 'Offre non trouvée' });
+    if (offre.recruteurId !== req.user.id) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+    const candidats = await CandidatOffre.findOne({ offreId }).sort({ score: -1 });
+    res.json(candidats);
   } catch (err) {
     next(err);
   }
@@ -194,32 +277,56 @@ exports.triggerScoring = async (req, res) => {
     }
 };
 
-exports.updateCandidatScore = async (req, res) => {
+// Mettre à jour le score d'un candidat (refactor depuis la route)
+exports.updateCandidatScore = async (req, res, next) => {
   try {
-    const { offreId, utilisateurId } = req.params;
+    const { offreId, candidatId } = req.params;
     const { score } = req.body;
-
-    /* on cible le bon candidat dans le tableau */
     const result = await CandidatOffre.findOneAndUpdate(
-      { offreId, 'candidats.utilisateurId': utilisateurId },
-      { $set: { 'candidats.$.score': score } },
-      { new: true, runValidators: false },   // pas de validation stricte ici
+      {
+        offreId,
+        'candidats.utilisateurId': candidatId,
+      },
+      {
+        $set: {
+          'candidats.$.score': score,
+        },
+      },
+      { new: true }
     );
-
-    if (!result)
+    if (!result) {
       return res.status(404).json({ message: 'Candidat non trouvé' });
+    }
+    res.json({ message: 'Score mis à jour avec succès' });
+  } catch (error) {
+    res.status(500).json({
+      message: 'Erreur lors de la mise à jour du score',
+      error: error.message,
+    });
+  }
+};
 
-    /* on retourne juste le candidat mis à jour */
-    const candidatMaj = result.candidats.find(
-      (c) => c.utilisateurId === utilisateurId,
-    );
-
-    res.json(candidatMaj);
-  } catch (err) {
-    console.error('updateCandidatScore ->', err.message);
-    res
-      .status(500)
-      .json({ message: 'Erreur lors de la mise à jour du score', error: err.message });
+// Récupérer les candidatures d'un utilisateur (refactor depuis la route)
+exports.getCandidaturesUtilisateur = async (req, res, next) => {
+  try {
+    const offresCandidats = await CandidatOffre.find({
+      'candidats.utilisateurId': req.params.utilisateurId,
+    });
+    const candidatures = offresCandidats
+      .filter((offre) => offre.candidats && Array.isArray(offre.candidats))
+      .map((offre) => ({
+        offreId: offre.offreId,
+        candidature: offre.candidats.find(
+          (c) => c.utilisateurId === req.params.utilisateurId
+        ),
+      }))
+      .filter((item) => item.candidature != null);
+    res.json(candidatures);
+  } catch (error) {
+    res.status(500).json({
+      message: 'Erreur lors de la récupération des candidatures',
+      error: error.message,
+    });
   }
 };
 
