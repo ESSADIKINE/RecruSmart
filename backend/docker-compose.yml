@@ -58,6 +58,10 @@ services:
     env_file: .env
     environment:
       RABBITMQ_URL: amqp://rabbitmq
+      NODE_ENV: production
+      GMAIL_USER: recrusmart.contact@gmail.com
+      GMAIL_APP_PASSWORD: wspx czzr emjq mnzc
+      MAIL_FROM: recrusmart.contact@gmail.com
     depends_on: [rabbitmq]
     networks: [recrusmart-network]
     restart: unless-stopped

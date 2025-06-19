@@ -4,7 +4,7 @@ const app = express();
 
 require('./consumers/notificationConsumer');
 
-app.get('/health', (req, res) => {
+app.get('/up', (req, res) => {
   res.json({ status: 'ok' });
 });
 

@@ -1,6 +1,6 @@
 const { connectRabbit } = require('../config/rabbitmq');
 const { sendEmail } = require('../utils/emailSender');
-const { getUserById, getOffreById } = require('../utils/apiGatewayClient');
+const { getUserById, getOffreById } = require('../apiGatewayClient');
 
 const EVENT_MAP = {
   'Auth.PasswordReset.Requested': {

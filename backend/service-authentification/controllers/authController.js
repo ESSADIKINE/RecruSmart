@@ -290,11 +290,15 @@ exports.forgotPassword = async (req, res, next) => {
         user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1h
         await user.save();
 
+        // Générer le lien de réinitialisation (adapter l'URL à ton frontend si besoin)
+        const resetLink = `http://localhost/reset-password?token=${resetToken}&email=${encodeURIComponent(user.email)}`;
+
         await publishEvent('Auth.PasswordReset.Requested', {
             utilisateurId: user._id,
             email: user.email,
             prenom: user.name,
-            resetToken
+            resetToken,
+            resetLink
         });
 
         res.json({ success: true, message: 'Email de réinitialisation envoyé' });
