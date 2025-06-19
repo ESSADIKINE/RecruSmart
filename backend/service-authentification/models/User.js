@@ -14,10 +14,6 @@ const UserSchema = new mongoose.Schema({
     type: String,
     minlength: [6, 'Password must be at least 6 characters long']
   },
-  googleId: { 
-    type: String,
-    sparse: true
-  },
   name: { 
     type: String,
     trim: true
@@ -33,7 +29,13 @@ const UserSchema = new mongoose.Schema({
   },
   lastLogin: {
     type: Date
-  }
+  },
+  refreshTokens: [{ type: String }],
+  otpCode: { type: String },
+  otpExpires: { type: Date },
+  isEmailVerified: { type: Boolean, default: false },
+  resetPasswordToken: { type: String },
+  resetPasswordExpires: { type: Date }
 }, { 
   timestamps: true,
   toJSON: {

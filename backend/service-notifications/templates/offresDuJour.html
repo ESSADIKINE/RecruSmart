@@ -1,9 +1,11 @@
 <html>
   <body>
-    <p>Bonjour {{prenom}},</p>
+    <p>Bonjour,</p>
     <p>Voici les offres du jour :</p>
     <ul>
-      {{offres}}
+      {{#each offres}}
+        <li><b>{{titre}}</b> : {{description}}</li>
+      {{/each}}
     </ul>
   </body>
 </html> 

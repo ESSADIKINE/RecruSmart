@@ -197,7 +197,7 @@ public class CandidateService {
         Profile profile = getProfilByUtilisateurId(utilisateurId);
         if (profile == null) {
             throw new RuntimeException("Profil non trouvé");
-        }
+            }
 
         Map<String, Object> candidatureData = new HashMap<>();
         candidatureData.put("utilisateurId", utilisateurId);
@@ -221,11 +221,11 @@ public class CandidateService {
             logger.info("[CANDIDATURE] Envoi de la requête au service offre via API Gateway");
             String response = webClient.post()
                     .uri("/api/offres/" + offreId + "/candidats")
-                    .contentType(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(candidatureData)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
             
             logger.info("[CANDIDATURE] Réponse du service offre: {}", response);
 

@@ -2,8 +2,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const offreRoutes = require('./routes/offreRoutes');
-const { authenticateToken } = require('./middleware/auth');
-
 const app = express();
 
 // Middleware

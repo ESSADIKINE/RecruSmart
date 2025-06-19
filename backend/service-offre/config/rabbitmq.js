@@ -43,7 +43,7 @@ const connect = async () => {
         isConnecting = false;
         console.error('Erreur de connexion à RabbitMQ:', error);
         throw error;
-    }
+  }
 };
 
 const ensureConnection = async () => {
@@ -65,7 +65,7 @@ const publishOffreEvent = async (routingKey, data) => {
         }));
         
         await channel.publish(
-            'recrusmart.events',
+    'recrusmart.events',
             routingKey,
             Buffer.from(JSON.stringify(serializedData)),
             {
