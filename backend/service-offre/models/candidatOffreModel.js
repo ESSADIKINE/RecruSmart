@@ -47,6 +47,7 @@ const candidatOffreSchema = new mongoose.Schema(
     {
       offreId: { type: String, unique: true, required: true },
       candidats: [candidatSchema],
+      selectionne: { type: Boolean, default: false }
     },
     { timestamps: true },
   );

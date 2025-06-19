@@ -1,6 +1,8 @@
 const Offre = require('../models/offreModel');
 const CandidatOffre = require('../models/candidatOffreModel');
 const { publishOffreEvent } = require('../config/rabbitmq');
+const amqp = require('amqplib');
+const cron = require('node-cron');
 
 exports.createOffre = async (req, res, next) => {
   try {
@@ -220,3 +222,67 @@ exports.updateCandidatScore = async (req, res) => {
       .json({ message: 'Erreur lors de la mise à jour du score', error: err.message });
   }
 };
+
+// Endpoint 1 : Envoyer les offres du jour à tous les candidats
+exports.envoyerOffresJour = async (req, res) => {
+    try {
+        const offres = await Offre.find({});
+        const candidats = await CandidatOffre.find({});
+        for (const candidat of candidats) {
+            await publishOffreEvent('Recruitment.Offre.Publiée', {
+                utilisateurId: candidat.utilisateurId,
+                offres: offres.map(o => ({ titre: o.titre, description: o.description, id: o._id }))
+            });
+        }
+        res.json({ success: true, message: 'Offres du jour envoyées à tous les candidats.' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// Endpoint 2 : Sélectionner un candidat et envoyer un email
+exports.selectionnerCandidat = async (req, res) => {
+    try {
+        const { candidatOffreId, messageRecruteur } = req.body;
+        const candidatOffre = await CandidatOffre.findById(candidatOffreId);
+        if (!candidatOffre) return res.status(404).json({ success: false, message: 'Candidat non trouvé.' });
+        candidatOffre.selectionne = true;
+        await candidatOffre.save();
+        const candidat = candidatOffre.candidats[0];
+        await publishOffreEvent('Recruitment.Candidat.Selectionne', {
+            type: 'Recruitment.Candidat.Selectionne',
+            data: {
+                utilisateurId: candidat.utilisateurId,
+                offreId: candidatOffre.offreId,
+                email: candidat.email,
+                message: messageRecruteur || ''
+            }
+        });
+        res.json({ success: true, message: 'Candidat sélectionné et notification envoyée.' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+// Fonction pour envoyer les offres du jour à tous les candidats (utilisée par le cron)
+async function envoyerOffresJourAutomatique() {
+    try {
+        const offres = await Offre.find({});
+        const candidats = await CandidatOffre.find({});
+        for (const candidat of candidats) {
+            await publishOffreEvent('Recruitment.Offre.Publiée', {
+                type: 'Recruitment.Offre.Publiée',
+                data: {
+                    utilisateurId: candidat.utilisateurId,
+                    offres: offres.map(o => ({ titre: o.titre, description: o.description, id: o._id }))
+                }
+            });
+        }
+        console.log('Offres du jour envoyées automatiquement à tous les candidats.');
+    } catch (err) {
+        console.error('Erreur lors de l\'envoi automatique des offres du jour :', err);
+    }
+}
+
+// Planification automatique chaque jour à 12:10
+cron.schedule('10 12 * * *', envoyerOffresJourAutomatique);

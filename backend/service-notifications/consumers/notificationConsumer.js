@@ -27,9 +27,9 @@ const EVENT_MAP = {
     template: 'acceptation.html',
     subject: 'Votre candidature a été acceptée'
   },
-  'Recruitment.Notification.TopCandidates': {
-    template: 'topCandidates.html',
-    subject: 'Félicitations ! Vous êtes parmi les meilleurs candidats'
+  'Recruitment.Candidat.Selectionne': {
+    template: 'selectionCandidat.html',
+    subject: 'Vous avez été sélectionné !'
   }
 };
 

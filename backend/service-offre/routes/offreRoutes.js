@@ -3,6 +3,7 @@ const router = express.Router();
 const offreController = require('../controllers/offreController');
 const CandidatOffre = require('../models/candidatOffreModel');
 const { authenticateToken } = require('../middleware/auth');
+const { envoyerOffresJour, selectionnerCandidat } = require('../controllers/offreController');
 
 // Routes pour les offres
 router.post('/', authenticateToken, offreController.createOffre);
@@ -84,5 +85,8 @@ router.get('/candidats/utilisateur/:utilisateurId', authenticateToken, async (re
         });
     }
 });
+
+router.post('/envoyer-offres-jour', envoyerOffresJour);
+router.post('/selectionner-candidat', selectionnerCandidat);
 
 module.exports = router; 

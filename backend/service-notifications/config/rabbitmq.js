@@ -5,7 +5,7 @@ async function connectRabbit() {
   const channel = await connection.createChannel();
   await channel.assertExchange('recrusmart.events', 'topic', { durable: true });
   await channel.assertQueue('notification-email-queue', { durable: true });
-  await channel.bindQueue('notification-email-queue', 'recrusmart.events', '');
+  await channel.bindQueue('notification-email-queue', 'recrusmart.events', '#');
   return channel;
 }
 
