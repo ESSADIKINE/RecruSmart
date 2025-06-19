@@ -80,6 +80,22 @@ public class CandidatControleur {
         }
     }
 
+    @GetMapping("/profils")
+    public ResponseEntity<?> profils(@RequestHeader("Authorization") String h) {
+        Token t = token(h);
+        if (!"ADMIN".equals(t.role)) return forbid();
+        return ResponseEntity.ok(service.getAllProfils());
+    }
+
+    @GetMapping("/profil/{id}")
+    public ResponseEntity<?> profilById(@PathVariable String id,
+                                        @RequestHeader("Authorization") String h) {
+        Token t = token(h);
+        if (!"ADMIN".equals(t.role) && !t.id.equals(id)) return forbid();
+        Profile p = service.getProfilByUtilisateurId(id);
+        return p == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(p);
+    }
+
     @GetMapping("/profil")
     public ResponseEntity<?> profil(@RequestHeader("Authorization") String h) {
         Profile p = service.getProfilByUtilisateurId(token(h).id);
