@@ -90,13 +90,13 @@ async function startConsumer() {
           console.log('Email envoyé pour', event.type, 'à', event.data.email);
         } else if (event.data && event.data.email) {
           // Cas standard pour un seul email
-          await sendEmail({
-            to: event.data.email,
-            subject: conf.subject,
-            templateName: conf.template,
-            variables: event.data
-          });
-          console.log('Email envoyé pour', event.type, 'à', event.data.email);
+        await sendEmail({
+          to: event.data.email,
+          subject: conf.subject,
+          templateName: conf.template,
+          variables: event.data
+        });
+        console.log('Email envoyé pour', event.type, 'à', event.data.email);
         }
       }
       channel.ack(msg);
