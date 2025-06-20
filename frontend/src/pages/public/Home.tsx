@@ -8,34 +8,34 @@ import { Card, CardContent } from '@/components/ui/card';
 import JobCard from '@/components/dashboard/JobCard';
 import { ArrowRight, CheckCircle2, Globe, Briefcase, Building2 } from 'lucide-react';
 
-// Sample data for featured jobs
+// Données d'exemple pour les emplois en vedette
 const featuredJobs = [
   {
     id: 1,
-    title: "Senior React Developer",
+    title: "Développeur React Senior",
     company: "TechCorp Inc.",
     companyLogo: "https://i.pravatar.cc/150?img=1",
-    location: "San Francisco, CA (Remote)",
-    salary: "$120K - $150K",
-    type: "Full-time",
-    status: "Featured",
-    description: "We're looking for a Senior React Developer to join our dynamic team. You'll be working on cutting-edge web applications using the latest technologies.",
+    location: "San Francisco, CA (Télétravail)",
+    salary: "120K€ - 150K€",
+    type: "Temps plein",
+    status: "En vedette",
+    description: "Nous recherchons un Développeur React Senior pour rejoindre notre équipe dynamique. Vous travaillerez sur des applications web de pointe utilisant les dernières technologies.",
     skills: ["React", "TypeScript", "Node.js", "Redux"],
-    postedDate: "2 days ago",
+    postedDate: "Il y a 2 jours",
     applicants: 42
   },
   {
     id: 2,
-    title: "UX/UI Designer",
+    title: "Designer UX/UI",
     company: "DesignHub",
     companyLogo: "https://i.pravatar.cc/150?img=2",
     location: "New York, NY",
-    salary: "$90K - $110K",
-    type: "Full-time",
-    status: "New",
-    description: "Join our creative team to design beautiful, intuitive interfaces for our flagship products. Work closely with product managers and developers.",
-    skills: ["Figma", "Adobe XD", "UI Design", "Prototyping"],
-    postedDate: "3 days ago",
+    salary: "90K€ - 110K€",
+    type: "Temps plein",
+    status: "Nouveau",
+    description: "Rejoignez notre équipe créative pour concevoir des interfaces belles et intuitives pour nos produits phares. Travaillez en étroite collaboration avec les chefs de produit et les développeurs.",
+    skills: ["Figma", "Adobe XD", "Design UI", "Prototypage"],
+    postedDate: "Il y a 3 jours",
     applicants: 28
   },
   {
@@ -43,18 +43,18 @@ const featuredJobs = [
     title: "Data Scientist",
     company: "DataMinds",
     companyLogo: "https://i.pravatar.cc/150?img=3",
-    location: "Remote",
-    salary: "$100K - $130K",
-    type: "Full-time",
+    location: "Télétravail",
+    salary: "100K€ - 130K€",
+    type: "Temps plein",
     status: "Urgent",
-    description: "We're seeking an experienced Data Scientist to work on challenging problems in machine learning and AI. Join a team of brilliant minds.",
-    skills: ["Python", "Machine Learning", "SQL", "Data Visualization"],
-    postedDate: "1 week ago",
+    description: "Nous recherchons un Data Scientist expérimenté pour travailler sur des problèmes complexes en apprentissage automatique et IA. Rejoignez une équipe d'esprits brillants.",
+    skills: ["Python", "Machine Learning", "SQL", "Visualisation de données"],
+    postedDate: "Il y a 1 semaine",
     applicants: 64
   }
 ];
 
-// Companies data
+// Données des entreprises
 const companies = [
   { name: "TechCorp", logo: "https://i.pravatar.cc/150?img=10" },
   { name: "DesignHub", logo: "https://i.pravatar.cc/150?img=20" },
@@ -79,10 +79,10 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      {/* Hero Section */}
+      {/* Section Hero */}
       <Hero />
       
-      {/* Featured Jobs Section */}
+      {/* Section Emplois en Vedette */}
       <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-10">
@@ -92,8 +92,8 @@ export default function Home() {
               viewport={{ once: true, margin: "-100px" }}
               variants={fadeIn}
             >
-              <h2 className="text-3xl font-bold">Featured Jobs</h2>
-              <p className="text-muted-foreground mt-2">Explore top opportunities from leading companies</p>
+              <h2 className="text-3xl font-bold">Emplois en Vedette</h2>
+              <p className="text-muted-foreground mt-2">Explorez les meilleures opportunités des entreprises leaders</p>
             </motion.div>
             
             <motion.div
@@ -103,7 +103,7 @@ export default function Home() {
               variants={fadeIn}
             >
               <Button variant="outline" className="hidden sm:flex items-center">
-                View All Jobs
+                Voir Tous les Emplois
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </motion.div>
@@ -128,21 +128,21 @@ export default function Home() {
                   }
                 }}
               >
-                <JobCard job={job} featured={job.status === 'Featured'} />
+                <JobCard job={job} featured={job.status === 'En vedette'} />
               </motion.div>
             ))}
           </div>
           
           <div className="mt-8 text-center">
             <Button variant="outline" className="sm:hidden">
-              View All Jobs
+              Voir Tous les Emplois
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>
       </section>
       
-      {/* How It Works Section */}
+      {/* Section Comment Ça Marche */}
       <section className="py-20">
         <div className="container mx-auto px-4">
           <motion.div
@@ -152,10 +152,10 @@ export default function Home() {
             variants={fadeIn}
             className="text-center max-w-2xl mx-auto mb-16"
           >
-            <h2 className="text-3xl font-bold mb-4">How RecruSmart Works</h2>
+            <h2 className="text-3xl font-bold mb-4">Comment Fonctionne RecruSmart</h2>
             <p className="text-muted-foreground">
-              Our platform simplifies the recruitment process for both employers and job seekers,
-              making it easier to find the perfect match.
+              Notre plateforme simplifie le processus de recrutement pour les employeurs et les chercheurs d'emploi,
+              facilitant la recherche du match parfait.
             </p>
           </motion.div>
           
@@ -163,18 +163,18 @@ export default function Home() {
             {[
               {
                 icon: <Globe className="h-10 w-10 text-primary" />,
-                title: "Create Your Profile",
-                description: "Build your professional profile highlighting your skills, experience, and career goals."
+                title: "Créez Votre Profil",
+                description: "Construisez votre profil professionnel en mettant en avant vos compétences, expérience et objectifs de carrière."
               },
               {
                 icon: <Briefcase className="h-10 w-10 text-primary" />,
-                title: "Find Relevant Jobs",
-                description: "Our AI matching algorithm finds the best opportunities based on your profile and preferences."
+                title: "Trouvez des Emplois Pertinents",
+                description: "Notre algorithme d'appariement IA trouve les meilleures opportunités basées sur votre profil et vos préférences."
               },
               {
                 icon: <Building2 className="h-10 w-10 text-primary" />,
-                title: "Connect with Employers",
-                description: "Apply to jobs with a single click and communicate directly with hiring managers."
+                title: "Connectez-vous avec les Employeurs",
+                description: "Postulez aux emplois en un seul clic et communiquez directement avec les responsables du recrutement."
               }
             ].map((item, index) => (
               <motion.div
@@ -207,7 +207,7 @@ export default function Home() {
         </div>
       </section>
       
-      {/* Top Companies Section */}
+      {/* Section Entreprises Leaders */}
       <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
           <motion.div
@@ -217,9 +217,9 @@ export default function Home() {
             variants={fadeIn}
             className="text-center max-w-2xl mx-auto mb-10"
           >
-            <h2 className="text-3xl font-bold mb-4">Top Companies Hiring</h2>
+            <h2 className="text-3xl font-bold mb-4">Entreprises Leaders qui Recrutent</h2>
             <p className="text-muted-foreground">
-              Join industry leaders and fast-growing startups using RecruSmart
+              Rejoignez les leaders de l'industrie et les startups en croissance rapide utilisant RecruSmart
             </p>
           </motion.div>
           
@@ -256,7 +256,7 @@ export default function Home() {
         </div>
       </section>
       
-      {/* CTA Section */}
+      {/* Section CTA */}
       <section className="py-20 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4">
           <motion.div
@@ -266,25 +266,25 @@ export default function Home() {
             variants={fadeIn}
             className="max-w-3xl mx-auto text-center"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Hiring Process?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">Prêt à Transformer Votre Processus de Recrutement ?</h2>
             <p className="text-primary-foreground/80 text-lg mb-8">
-              Join thousands of companies and candidates making better connections with RecruSmart.
+              Rejoignez des milliers d'entreprises et de candidats qui établissent de meilleures connexions avec RecruSmart.
             </p>
             
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Button size="lg" variant="secondary" className="text-primary">
-                Post a Job Now
+                Publier un Emploi Maintenant
               </Button>
               <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:text-primary hover:bg-primary-foreground">
-                Learn More
+                En Savoir Plus
               </Button>
             </div>
             
             <div className="mt-10 flex flex-col md:flex-row justify-center gap-8">
               {[
-                "93% faster hiring process",
-                "75% cost reduction",
-                "86% better candidate match"
+                "Processus de recrutement 93% plus rapide",
+                "Réduction des coûts de 75%",
+                "86% de meilleur appariement de candidats"
               ].map((stat, index) => (
                 <div key={index} className="flex items-center justify-center">
                   <CheckCircle2 className="h-5 w-5 mr-2 text-green-400" />
