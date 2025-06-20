@@ -19,18 +19,11 @@ import pika
 from .config import OFFRE_SERVICE_URL
 
 
-# ---------------------------------------------------------------
-# Helper صغير باش نمرّر body بنفس الواجهة اللي كيتوقعها
-# ---------------------------------------------------------------
 class _Msg:
     """Wrap raw bytes from RabbitMQ so we get `msg.body` like aio-pika."""
     def __init__(self, raw: bytes):
         self.body = raw
 
-
-# ---------------------------------------------------------------
-# Utilities
-# ---------------------------------------------------------------
 def safe_json_loads(val, default):
     try:
         if val is None or val == "null":
@@ -62,13 +55,11 @@ def compute_score(candidat: Dict[str, Any], offre: Dict[str, Any]) -> int:
         elif comp in exp_comps:                 # compétence déduite des expériences
             score += 5
 
-    # ---- 2. années d’expérience (15 pts) -----------------------
     cand_years = int(safe_json_loads(candidat.get("anneesExperience", 0), 0))
     offre_years = int(offre.get("anneesExperience", 0) or 0)
     if cand_years >= offre_years:
         score += 15
 
-    # ---- 3. niveau d’étude (15 pts) ----------------------------
     cand_lvl = str(candidat.get("niveauEtude", "")).lower()
     offre_lvl = str(offre.get("niveauEtude", "")).lower()
     if cand_lvl and cand_lvl == offre_lvl:
@@ -76,7 +67,6 @@ def compute_score(candidat: Dict[str, Any], offre: Dict[str, Any]) -> int:
     elif cand_lvl == "bac+4" and offre_lvl == "bac+5":
         score += 10  # presque
 
-    # ---- 4. domaine (15 pts) ----------------------------------
     cand_domains = safe_json_loads(candidat.get("domaines", "[]"), [])
     if isinstance(cand_domains, str):
         try:
@@ -87,7 +77,6 @@ def compute_score(candidat: Dict[str, Any], offre: Dict[str, Any]) -> int:
     if str(offre.get("domaine", "")).lower() in cand_domains:
         score += 15
 
-    # ---- 5. langue (15 pts) -----------------------------------
     langues = safe_json_loads(candidat.get("langues", "{}"), {})
     if isinstance(langues, str):
         try:
@@ -100,9 +89,6 @@ def compute_score(candidat: Dict[str, Any], offre: Dict[str, Any]) -> int:
     return min(score, 100)
 
 
-# ---------------------------------------------------------------
-#  core async: traite message scoring
-# ---------------------------------------------------------------
 async def process_scoring_message(msg: _Msg):
     """Reçoit message JSON, يحسب السكور، ويحينه عبر الـ API Gateway."""
     data = json.loads(msg.body.decode())
@@ -144,15 +130,15 @@ async def process_scoring_message(msg: _Msg):
                         success += 1
                     else:
                         logging.error(
-                            "❌ PUT %s → %s\n%s",
+                            "PUT %s → %s\n%s",
                             url,
                             resp.status,
                             await resp.text(),
                         )
             except Exception as exc:
-                logging.exception("❌ Exception PUT score: %s", exc)
+                logging.exception("Exception PUT score: %s", exc)
 
-    logging.info("✅ Scoring terminé: %d/%d OK", success, len(scored))
+    logging.info("Scoring terminé: %d/%d OK", success, len(scored))
 
 
 # ---------------------------------------------------------------
@@ -195,16 +181,12 @@ def start_consumer():
         channel.basic_consume(
             queue="intelligence.scoring.queue", on_message_callback=_on_event, auto_ack=True
         )
-        logging.info("🟢 En attente d'événements de scoring …")
+        logging.info("En attente d'événements de scoring …")
         channel.start_consuming()
     except KeyboardInterrupt:
-        logging.info("🛑 Arrêt consumer (Ctrl-C)")
+        logging.info("Arrêt consumer (Ctrl-C)")
     except Exception:
-        logging.exception("❌ Erreur consumer – arrêt")
+        logging.exception("Erreur consumer – arrêt")
 
-
-# ---------------------------------------------------------------
-# Lance directement si on exécute le fichier
-# ---------------------------------------------------------------
 if __name__ == "__main__":
     start_consumer()
