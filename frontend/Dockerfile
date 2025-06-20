@@ -5,8 +5,8 @@ COPY tsconfig.json ./
 COPY vite.config.* ./
 COPY tailwind.config.js ./
 COPY postcss.config.js ./
-RUN npm ci
 COPY . .
+RUN npm install
 RUN npm run build
 
 FROM nginx:alpine
