@@ -36,7 +36,7 @@ const UserSchema = new mongoose.Schema({
   isEmailVerified: { type: Boolean, default: false },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
-  image: { type: String }
+  image: { type: String, default: 'https://res.cloudinary.com/drn9pvlhp/image/upload/v1750439067/recrusmart/users/user_685593aec49656b70ef86c19_1750439065204.jpg' }
 }, { 
   timestamps: true,
   toJSON: {
