@@ -17,6 +17,7 @@ router.post('/logout', authController.logout);
 // Routes protégées
 router.get('/me', authMiddleware, authController.getMe);
 router.put('/me', authMiddleware, authController.updateMe);
+router.post('/me/image', authMiddleware, authController.uploadMiddleware, authController.uploadImage);
 
 // Routes admin
 router.get('/users', authMiddleware, isAdmin, authController.getAllUsers);

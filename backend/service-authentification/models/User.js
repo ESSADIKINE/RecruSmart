@@ -35,7 +35,8 @@ const UserSchema = new mongoose.Schema({
   otpExpires: { type: Date },
   isEmailVerified: { type: Boolean, default: false },
   resetPasswordToken: { type: String },
-  resetPasswordExpires: { type: Date }
+  resetPasswordExpires: { type: Date },
+  image: { type: String }
 }, { 
   timestamps: true,
   toJSON: {

@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const { AppError } = require('../middlewares/errorHandler');
 const { publishEvent } = require('../config/rabbitmq');
 const crypto = require('crypto');
+const cloudinary = require('cloudinary').v2;
+const multer = require('multer');
 
 const createAccessToken = (user) =>
     jwt.sign(
@@ -29,6 +31,43 @@ const validateUserData = (data) => {
     }
 
     return errors;
+};
+
+// Cloudinary config
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Multer config (memory storage)
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+exports.uploadMiddleware = upload.single('image');
+
+exports.uploadImage = async (req, res, next) => {
+    try {
+        if (!req.file) {
+            throw new AppError('No image file uploaded', 400);
+        }
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload_stream({
+            folder: 'recrusmart/users',
+            resource_type: 'image',
+            public_id: `user_${req.user._id}_${Date.now()}`
+        }, async (error, result) => {
+            if (error) return next(new AppError('Cloudinary upload failed', 500));
+            // Update user
+            req.user.image = result.secure_url;
+            await req.user.save();
+            res.json({ success: true, image: result.secure_url });
+        });
+        // Pipe file buffer to Cloudinary
+        result.end(req.file.buffer);
+    } catch (err) {
+        next(err);
+    }
 };
 
 exports.register = async (req, res, next) => {
