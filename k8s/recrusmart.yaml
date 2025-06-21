@@ -1,0 +1,520 @@
+# Kubernetes configuration for the RecruSmart platform
+# This file deploys all services and infrastructure components
+# Apply with: kubectl apply -f k8s/recrusmart.yaml
+
+---
+# MongoDB Deployment and Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:8
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: data
+          mountPath: /data/db
+      volumes:
+      - name: data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    targetPort: 27017
+
+---
+# MySQL Deployment and Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "changeme"
+        - name: MYSQL_DATABASE
+          value: recrusmart
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+spec:
+  selector:
+    app: mysql
+  ports:
+  - port: 3306
+    targetPort: 3306
+
+---
+# RabbitMQ Deployment and Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+spec:
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3-management
+        ports:
+        - containerPort: 5672
+        - containerPort: 15672
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/rabbitmq
+      volumes:
+      - name: data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+  - port: 5672
+    targetPort: 5672
+  - port: 15672
+    targetPort: 15672
+
+---
+# Consul Deployment and Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consul
+spec:
+  selector:
+    matchLabels:
+      app: consul
+  template:
+    metadata:
+      labels:
+        app: consul
+    spec:
+      containers:
+      - name: consul
+        image: consul:1.16
+        ports:
+        - containerPort: 8500
+        - containerPort: 8600
+          protocol: UDP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consul
+spec:
+  selector:
+    app: consul
+  ports:
+  - port: 8500
+    targetPort: 8500
+  - port: 8600
+    targetPort: 8600
+    protocol: UDP
+
+---
+# Auth service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+spec:
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+      - name: auth-service
+        image: auth-service:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: MONGO_URI
+          value: mongodb://mongodb:27017/recrusmart_auth
+        - name: JWT_SECRET
+          value: changeme
+        - name: RABBITMQ_URL
+          value: amqp://rabbitmq
+        - name: SERVICE_NAME
+          value: auth-service
+        - name: SERVICE_HOST
+          value: auth-service
+        - name: PORT
+          value: "5000"
+        - name: CONSUL_HOST
+          value: consul
+        - name: CONSUL_PORT
+          value: "8500"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+spec:
+  selector:
+    app: auth-service
+  ports:
+  - port: 5000
+    targetPort: 5000
+
+---
+# Offre service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: offre-service
+spec:
+  selector:
+    matchLabels:
+      app: offre-service
+  template:
+    metadata:
+      labels:
+        app: offre-service
+    spec:
+      containers:
+      - name: offre-service
+        image: offre-service:latest
+        ports:
+        - containerPort: 8081
+        env:
+        - name: MONGO_URI
+          value: mongodb://mongodb:27017/recrusmart_offres
+        - name: RABBITMQ_URL
+          value: amqp://rabbitmq
+        - name: SERVICE_NAME
+          value: offre-service
+        - name: SERVICE_HOST
+          value: offre-service
+        - name: PORT
+          value: "8081"
+        - name: CONSUL_HOST
+          value: consul
+        - name: CONSUL_PORT
+          value: "8500"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: offre-service
+spec:
+  selector:
+    app: offre-service
+  ports:
+  - port: 8081
+    targetPort: 8081
+
+---
+# Intelligence service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: intelligence-service
+spec:
+  selector:
+    matchLabels:
+      app: intelligence-service
+  template:
+    metadata:
+      labels:
+        app: intelligence-service
+    spec:
+      containers:
+      - name: intelligence-service
+        image: intelligence-service:latest
+        ports:
+        - containerPort: 8082
+        env:
+        - name: SERVICE_NAME
+          value: intelligence-service
+        - name: SERVICE_HOST
+          value: intelligence-service
+        - name: PORT
+          value: "8082"
+        - name: CONSUL_HOST
+          value: consul
+        - name: CONSUL_PORT
+          value: "8500"
+        - name: RABBITMQ_HOST
+          value: rabbitmq
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: intelligence-service
+spec:
+  selector:
+    app: intelligence-service
+  ports:
+  - port: 8082
+    targetPort: 8082
+
+---
+# Notification service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+spec:
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      containers:
+      - name: notification-service
+        image: notification-service:latest
+        ports:
+        - containerPort: 5003
+        env:
+        - name: RABBITMQ_URL
+          value: amqp://rabbitmq
+        - name: NODE_ENV
+          value: production
+        - name: GMAIL_USER
+          value: recrusmart.contact@gmail.com
+        - name: GMAIL_APP_PASSWORD
+          value: changeme
+        - name: MAIL_FROM
+          value: recrusmart.contact@gmail.com
+        - name: SERVICE_NAME
+          value: notification-service
+        - name: SERVICE_HOST
+          value: notification-service
+        - name: PORT
+          value: "5003"
+        - name: CONSUL_HOST
+          value: consul
+        - name: CONSUL_PORT
+          value: "8500"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+spec:
+  selector:
+    app: notification-service
+  ports:
+  - port: 5003
+    targetPort: 5003
+
+---
+# Entretiens service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: entretiens-service
+spec:
+  selector:
+    matchLabels:
+      app: entretiens-service
+  template:
+    metadata:
+      labels:
+        app: entretiens-service
+    spec:
+      containers:
+      - name: entretiens-service
+        image: entretiens-service:latest
+        ports:
+        - containerPort: 4000
+        env:
+        - name: MONGO_URI
+          value: mongodb://mongodb:27017/recrusmart_entretiens
+        - name: RABBITMQ_URL
+          value: amqp://rabbitmq
+        - name: JWT_SECRET
+          value: changeme
+        - name: SERVICE_NAME
+          value: entretiens-service
+        - name: SERVICE_HOST
+          value: entretiens-service
+        - name: PORT
+          value: "4000"
+        - name: CONSUL_HOST
+          value: consul
+        - name: CONSUL_PORT
+          value: "8500"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: entretiens-service
+spec:
+  selector:
+    app: entretiens-service
+  ports:
+  - port: 4000
+    targetPort: 4000
+
+---
+# Candidat service (Spring Boot)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: candidat-service
+spec:
+  selector:
+    matchLabels:
+      app: candidat-service
+  template:
+    metadata:
+      labels:
+        app: candidat-service
+    spec:
+      containers:
+      - name: candidat-service
+        image: candidat-service:latest
+        ports:
+        - containerPort: 8084
+        env:
+        - name: SPRING_DATASOURCE_URL
+          value: jdbc:mysql://mysql:3306/recrusmart
+        - name: SPRING_DATASOURCE_USERNAME
+          value: root
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: changeme
+        - name: OFFRE_BASE_URL
+          value: http://api-gateway/api/offres
+        - name: SERVICE_NAME
+          value: candidat-service
+        - name: SERVICE_HOST
+          value: candidat-service
+        - name: CONSUL_HOST
+          value: consul
+        - name: CONSUL_PORT
+          value: "8500"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: candidat-service
+spec:
+  selector:
+    app: candidat-service
+  ports:
+  - port: 8084
+    targetPort: 8084
+
+---
+# API Gateway (Nginx)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+spec:
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: api-gateway:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+spec:
+  selector:
+    app: api-gateway
+  ports:
+  - port: 80
+    targetPort: 80
+  type: NodePort
+
+---
+# Frontend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: frontend:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  selector:
+    app: frontend
+  ports:
+  - port: 80
+    targetPort: 80
+  type: NodePort

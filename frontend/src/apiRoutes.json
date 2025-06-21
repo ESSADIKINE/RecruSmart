@@ -1,0 +1,148 @@
+{
+  "service-authentification": [
+    {
+      "method": "POST",
+      "path": "/register"
+    },
+    {
+      "method": "POST",
+      "path": "/login"
+    },
+    {
+      "method": "POST",
+      "path": "/send-otp"
+    },
+    {
+      "method": "POST",
+      "path": "/verify-otp"
+    },
+    {
+      "method": "POST",
+      "path": "/forgot-password"
+    },
+    {
+      "method": "POST",
+      "path": "/reset-password"
+    },
+    {
+      "method": "POST",
+      "path": "/refresh-token"
+    },
+    {
+      "method": "POST",
+      "path": "/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/me"
+    },
+    {
+      "method": "PUT",
+      "path": "/me"
+    },
+    {
+      "method": "POST",
+      "path": "/me/image"
+    },
+    {
+      "method": "GET",
+      "path": "/users"
+    },
+    {
+      "method": "GET",
+      "path": "/users/:id"
+    },
+    {
+      "method": "PUT",
+      "path": "/users/:id"
+    },
+    {
+      "method": "PUT",
+      "path": "/users/:id/ban"
+    }
+  ],
+  "service-entretiens": [
+    {
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "method": "GET",
+      "path": "/:id"
+    },
+    {
+      "method": "PUT",
+      "path": "/:id"
+    },
+    {
+      "method": "DELETE",
+      "path": "/:id"
+    }
+  ],
+  "service-offre": [
+    {
+      "method": "POST",
+      "path": "/"
+    },
+    {
+      "method": "GET",
+      "path": "/admin"
+    },
+    {
+      "method": "GET",
+      "path": "/mes-offres"
+    },
+    {
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "method": "GET",
+      "path": "/:offreId/candidats-recruteur"
+    },
+    {
+      "method": "GET",
+      "path": "/:id"
+    },
+    {
+      "method": "PUT",
+      "path": "/:id"
+    },
+    {
+      "method": "DELETE",
+      "path": "/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/:id/score"
+    },
+    {
+      "method": "PUT",
+      "path": "/:offreId/candidat/:candidatId/score"
+    },
+    {
+      "method": "POST",
+      "path": "/:offreId/candidats"
+    },
+    {
+      "method": "GET",
+      "path": "/:offreId/candidats"
+    },
+    {
+      "method": "GET",
+      "path": "/candidats/utilisateur/:utilisateurId"
+    },
+    {
+      "method": "POST",
+      "path": "/envoyer-offres-jour"
+    },
+    {
+      "method": "POST",
+      "path": "/selectionner-candidat"
+    }
+  ]
+}

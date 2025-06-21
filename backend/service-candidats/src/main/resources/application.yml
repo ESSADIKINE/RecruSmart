@@ -46,3 +46,11 @@ logging:
   level:
     org.springframework.web: INFO
     org.hibernate.SQL: DEBUG     # enlève si trop verbeux
+
+spring:
+  cloud:
+    consul:
+      host: ${CONSUL_HOST:consul}
+      port: ${CONSUL_PORT:8500}
+      discovery:
+        service-name: candidat-service

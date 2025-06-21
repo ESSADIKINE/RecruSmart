@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import os
+import consul
 from fastapi import FastAPI, BackgroundTasks, Header, HTTPException
 from aio_pika import connect_robust, ExchangeType
 from .offer_consumer import process_scoring_message, start_consumer
@@ -88,6 +90,36 @@ class RabbitMQManager:
 
 rabbitmq = RabbitMQManager()
 processed_candidates = set()
+consul_client = None
+service_id = None
+
+def register_with_consul():
+    global consul_client, service_id
+    consul_client = consul.Consul(host=os.getenv("CONSUL_HOST", "consul"),
+                                 port=int(os.getenv("CONSUL_PORT", "8500")))
+    service_name = os.getenv("SERVICE_NAME", "intelligence-service")
+    service_host = os.getenv("SERVICE_HOST", "intelligence-service")
+    service_port = int(os.getenv("PORT", "8082"))
+    service_id = f"{service_name}-{service_port}"
+    check = consul.Check.http(
+        f"http://{service_host}:{service_port}/health",
+        interval="10s"
+    )
+    consul_client.agent.service.register(
+        name=service_name,
+        service_id=service_id,
+        address=service_host,
+        port=service_port,
+        check=check
+    )
+    logger.info("Registered with Consul")
+
+def deregister_from_consul():
+    if consul_client and service_id:
+        try:
+            consul_client.agent.service.deregister(service_id)
+        except Exception as e:
+            logger.error(f"Consul deregistration failed: {e}")
 
 async def process_cv_message(message):
     """Traite les messages de CV reçus"""
@@ -172,6 +204,8 @@ async def startup_event():
         consumer_thread = threading.Thread(target=start_consumer)
         consumer_thread.daemon = True
         consumer_thread.start()
+
+        register_with_consul()
         
     except Exception as e:
         logger.error(f"Erreur lors du démarrage: {str(e)}")
@@ -181,6 +215,7 @@ async def startup_event():
 async def shutdown_event():
     """Événement d'arrêt de l'application"""
     await rabbitmq.close()
+    deregister_from_consul()
 
 @app.get("/health")
 async def health_check():
@@ -200,4 +235,4 @@ async def score_offre(offre_id: str, background_tasks: BackgroundTasks, authoriz
         "offreId": offre_id,
         "token": token
     })
-    return {"message": "Scoring démarré en arrière-plan"} 
+    return {"message": "Scoring démarré en arrière-plan"}
