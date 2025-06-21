@@ -49,14 +49,14 @@ export default function Hero() {
             variants={itemVariants}
             className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6"
           >
-            The Smarter Way to <span className="text-primary">Recruit</span> and Get <span className="text-primary">Recruited</span>
+            La Façon Plus Intelligente de <span className="text-primary">Recruter</span> et d'Être <span className="text-primary">Recruté</span>
           </motion.h1>
           
           <motion.p 
             variants={itemVariants}
             className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto"
           >
-            Connect with top talent and opportunities through our AI-powered recruitment platform designed for the modern workforce.
+            Connectez-vous avec les meilleurs talents et opportunités grâce à notre plateforme de recrutement alimentée par l'IA, conçue pour la main-d'œuvre moderne.
           </motion.p>
           
           <motion.div 
@@ -67,7 +67,7 @@ export default function Hero() {
               <Button asChild size="lg" className="group">
                 <Link to="/register?role=recruiter" className="flex items-center">
                   <Building className="mr-2 h-5 w-5" />
-                  I'm a Recruiter
+                  Je suis un Recruteur
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
@@ -77,7 +77,7 @@ export default function Hero() {
               <Button asChild variant="outline" size="lg" className="group">
                 <Link to="/register?role=candidate" className="flex items-center">
                   <User className="mr-2 h-5 w-5" />
-                  I'm a Candidate
+                  Je suis un Candidat
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
@@ -95,8 +95,8 @@ export default function Hero() {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="font-medium">10,000+ Jobs</p>
-                <p className="text-sm text-muted-foreground">Updated daily</p>
+                <p className="font-medium">10 000+ Emplois</p>
+                <p className="text-sm text-muted-foreground">Mis à jour quotidiennement</p>
               </div>
             </div>
             
@@ -107,8 +107,8 @@ export default function Hero() {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="font-medium">Fast Hiring</p>
-                <p className="text-sm text-muted-foreground">73% faster than average</p>
+                <p className="font-medium">Recrutement Rapide</p>
+                <p className="text-sm text-muted-foreground">73% plus rapide que la moyenne</p>
               </div>
             </div>
             
@@ -119,8 +119,8 @@ export default function Hero() {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="font-medium">5000+ Companies</p>
-                <p className="text-sm text-muted-foreground">From startups to enterprises</p>
+                <p className="font-medium">5000+ Entreprises</p>
+                <p className="text-sm text-muted-foreground">Des startups aux grandes entreprises</p>
               </div>
             </div>
           </motion.div>

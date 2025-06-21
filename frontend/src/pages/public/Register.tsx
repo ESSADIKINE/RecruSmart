@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/context/AuthContext';
@@ -42,15 +42,14 @@ export default function Register() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  // Get role from URL params
-  const searchParams = new URLSearchParams(location.search);
+  const [searchParams] = useSearchParams();
   const roleParam = searchParams.get('role');
 
   const {
     register,
     handleSubmit,
     setValue,
+    control,
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -167,22 +166,32 @@ export default function Register() {
           
           <div className="space-y-3">
             <Label>I am a</Label>
-            <RadioGroup defaultValue={roleParam || undefined} className="flex gap-4" {...register('role')}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="candidate" id="candidate" />
-                <Label htmlFor="candidate" className="flex items-center cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  Candidate
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="recruiter" id="recruiter" />
-                <Label htmlFor="recruiter" className="flex items-center cursor-pointer">
-                  <Building className="mr-2 h-4 w-4" />
-                  Recruiter
-                </Label>
-              </div>
-            </RadioGroup>
+            <Controller
+              name="role"
+              control={control}
+              render={({ field }) => (
+                <RadioGroup
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="candidate" id="candidate" />
+                    <Label htmlFor="candidate" className="flex items-center cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      Candidate
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="recruiter" id="recruiter" />
+                    <Label htmlFor="recruiter" className="flex items-center cursor-pointer">
+                      <Building className="mr-2 h-4 w-4" />
+                      Recruiter
+                    </Label>
+                  </div>
+                </RadioGroup>
+              )}
+            />
             {errors.role && (
               <p className="text-sm text-destructive">{errors.role.message}</p>
             )}
