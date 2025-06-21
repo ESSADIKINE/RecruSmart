@@ -4,12 +4,9 @@ const mongoose = require('mongoose');
 const morgan = require('morgan');
 const cors = require('cors');
 const session = require('express-session');
-const passport = require('passport');
 const MongoStore = require('connect-mongo');
 const authRoutes = require('./routes/auth');
-const googleAuthRoutes = require('./routes/googleAuth');
 const { errorHandler } = require('./middlewares/errorHandler');
-require('./config/passport');
 require('./config/db');
 
 const app = express();
@@ -38,24 +35,16 @@ app.use(session({
     }
 }));
 
-// Passport middleware
-app.use(passport.initialize());
-app.use(passport.session());
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/auth', googleAuthRoutes);
-
 // Health check endpoint
-app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'healthy' });
-});
 
 // Error handling middleware (must be after routes)
 app.use(errorHandler);
 
 // Start server
-const PORT = process.env.PORT || 3000;
+const PORT = 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 }); 

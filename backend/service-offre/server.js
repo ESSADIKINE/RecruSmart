@@ -1,25 +1,33 @@
-require('dotenv').config();
 const express = require('express');
-const morgan = require('morgan');
+const mongoose = require('mongoose');
 const cors = require('cors');
-const mongoose = require('./config/db');
 const offreRoutes = require('./routes/offreRoutes');
-const errorHandler = require('./middleware/errorHandler');
-const candidatOffreRoutes = require('./routes/candidatOffreRoutes');
-require('./config/rabbitmq');
-
 const app = express();
 
-app.use(morgan('dev'));
+// Middleware
 app.use(cors());
 app.use(express.json());
 
+// Routes
 app.use('/offres', offreRoutes);
-app.use('/candidatures', candidatOffreRoutes);
 
-app.use(errorHandler);
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ message: 'Une erreur est survenue', error: err.message });
+});
 
-const PORT = process.env.PORT || 8081;
-app.listen(PORT, () => {
-  console.log(`Offre service running on port ${PORT}`);
-}); 
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => {
+        console.log('Connecté à MongoDB');
+        // Start server
+        const PORT = process.env.PORT || 8081;
+        app.listen(PORT, () => {
+            console.log(`Serveur démarré sur le port ${PORT}`);
+        });
+    })
+    .catch(err => {
+        console.error('Erreur de connexion à MongoDB:', err);
+        process.exit(1);
+    }); 

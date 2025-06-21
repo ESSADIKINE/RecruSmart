@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 .env
+docker-compose.yml
+application.yml
+application.properties
